@@ -81,6 +81,9 @@ app.get('/api/exam/generate', (req, res) => {
     let examQuestions = [];
     let durationSeconds = 7200; // 120 minutes by default
 
+    const includePassages = req.query.include_passages !== 'false';
+    const includeNovel = req.query.include_novel !== 'false';
+
     if (mode === 'full_mock') {
       // Standard JAMB UTME: 180 Questions across 4 subjects
       // English: 60 Qs
@@ -89,52 +92,63 @@ app.get('/api/exam/generate', (req, res) => {
       // Chemistry: 40 Qs
       durationSeconds = 120 * 60; // 120 minutes fixed continuous
 
-      // 1. English (60 Questions: Sections A, B, C)
-      // Pick passage-based questions first
-      const engComprehension = db.prepare(`
-        SELECT * FROM questions 
-        WHERE subject_id = 'english' AND passage_id IS NOT NULL AND topic = 'Comprehension' 
-        ORDER BY RANDOM() LIMIT 10
-      `).all();
+      // 1. English (60 Questions)
+      let engPassages = [];
+      if (includePassages) {
+        const engComprehension = db.prepare(`
+          SELECT * FROM questions 
+          WHERE subject_id = 'english' AND passage_id IS NOT NULL AND topic = 'Comprehension' 
+          ORDER BY RANDOM() LIMIT 10
+        `).all();
 
-      const engCloze = db.prepare(`
-        SELECT * FROM questions 
-        WHERE subject_id = 'english' AND passage_id IS NOT NULL AND topic = 'Cloze Passage' 
-        ORDER BY RANDOM() LIMIT 10
-      `).all();
+        const engCloze = db.prepare(`
+          SELECT * FROM questions 
+          WHERE subject_id = 'english' AND passage_id IS NOT NULL AND topic = 'Cloze Passage' 
+          ORDER BY RANDOM() LIMIT 10
+        `).all();
 
-      const engNovel = db.prepare(`
-        SELECT * FROM questions 
-        WHERE subject_id = 'english' AND topic = 'The Life Changer' 
-        ORDER BY RANDOM() LIMIT 10
-      `).all();
+        engPassages = [...engComprehension, ...engCloze];
+      }
 
-      // Lexis and Structure (~20 Qs)
+      let engNovel = [];
+      if (includeNovel) {
+        engNovel = db.prepare(`
+          SELECT * FROM questions 
+          WHERE subject_id = 'english' AND (topic = 'The Life Changer' OR section LIKE '%Prescribed%') 
+          ORDER BY RANDOM() LIMIT 10
+        `).all();
+      }
+
+      // Lexis and Structure
       const engLexis = db.prepare(`
         SELECT * FROM questions 
         WHERE subject_id = 'english' AND section LIKE '%Lexis%' 
-        ORDER BY RANDOM() LIMIT 20
+        ORDER BY RANDOM() LIMIT 30
       `).all();
 
-      // Oral Forms (~10 Qs)
+      // Oral Forms
       const engOral = db.prepare(`
         SELECT * FROM questions 
         WHERE subject_id = 'english' AND section LIKE '%Oral%' 
-        ORDER BY RANDOM() LIMIT 10
+        ORDER BY RANDOM() LIMIT 20
       `).all();
 
-      let engPool = [...engComprehension, ...engCloze, ...engNovel, ...engLexis, ...engOral];
+      let engPool = [...engPassages, ...engNovel, ...engLexis, ...engOral];
       
-      // If pool is less than 60, fill with other random English questions
+      // If pool is less than 60, fill with other random English questions conforming to preferences
       if (engPool.length < 60) {
         const existingIds = engPool.map(q => q.id);
-        const placeholders = existingIds.map(() => '?').join(',');
+        const placeholders = existingIds.length > 0 ? existingIds.map(() => '?').join(',') : '0';
         const needed = 60 - engPool.length;
-        const filler = db.prepare(`
-          SELECT * FROM questions 
-          WHERE subject_id = 'english' AND id NOT IN (${placeholders}) 
-          ORDER BY RANDOM() LIMIT ?
-        `).all(...existingIds, needed);
+        let fillerQuery = `SELECT * FROM questions WHERE subject_id = 'english' AND id NOT IN (${placeholders})`;
+        if (!includePassages) {
+          fillerQuery += ` AND passage_id IS NULL AND section NOT LIKE '%Passage%' AND section NOT LIKE '%Comprehension%'`;
+        }
+        if (!includeNovel) {
+          fillerQuery += ` AND topic != 'The Life Changer' AND section NOT LIKE '%Prescribed%'`;
+        }
+        fillerQuery += ` ORDER BY RANDOM() LIMIT ?`;
+        const filler = db.prepare(fillerQuery).all(...existingIds, needed);
         engPool.push(...filler);
       }
       engPool = engPool.slice(0, 60);

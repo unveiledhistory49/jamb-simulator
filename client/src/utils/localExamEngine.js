@@ -13,7 +13,14 @@ export async function fetchQuestionBank() {
   return cachedBank;
 }
 
-export async function generateLocalExam({ mode = 'full_mock', subject = 'english', count = 40, year = null }) {
+export async function generateLocalExam({ 
+  mode = 'full_mock', 
+  subject = 'english', 
+  count = 40, 
+  year = null,
+  includePassages = true,
+  includeNovel = true
+}) {
   const bank = await fetchQuestionBank();
   const allQs = bank.questions;
   const passages = bank.passages;
@@ -21,28 +28,72 @@ export async function generateLocalExam({ mode = 'full_mock', subject = 'english
   let selected = [];
   let durationSeconds = 7200;
 
+  const isPassageQuestion = (q) => Boolean(q.passage_id || (q.section && (q.section.includes('Passage') || q.section.includes('Comprehension'))));
+  const isNovelQuestion = (q) => Boolean((q.topic && q.topic.includes('Life Changer')) || (q.section && q.section.includes('Prescribed Text')));
+
+  const shuffle = (arr) => [...arr].sort(() => 0.5 - Math.random());
+
+  const getEnglishPool = (targetCount = 60) => {
+    let pool = allQs.filter(q => q.subject_id === 'english');
+
+    if (!includePassages) {
+      pool = pool.filter(q => !isPassageQuestion(q));
+    }
+    if (!includeNovel) {
+      pool = pool.filter(q => !isNovelQuestion(q));
+    }
+
+    // If options are default (both included), balance across sections
+    if (includePassages && includeNovel) {
+      const comp = shuffle(pool.filter(q => q.topic === 'Comprehension' && q.passage_id)).slice(0, 10);
+      const cloze = shuffle(pool.filter(q => q.topic === 'Cloze Passage' && q.passage_id)).slice(0, 10);
+      const novel = shuffle(pool.filter(q => isNovelQuestion(q))).slice(0, 10);
+      const lexis = shuffle(pool.filter(q => q.section && q.section.includes('Lexis'))).slice(0, 20);
+      const oral = shuffle(pool.filter(q => q.section && q.section.includes('Oral'))).slice(0, 10);
+      
+      let structured = [...comp, ...cloze, ...novel, ...lexis, ...oral];
+      if (structured.length < targetCount) {
+        const existingIds = new Set(structured.map(q => q.id));
+        const remaining = shuffle(pool.filter(q => !existingIds.has(q.id))).slice(0, targetCount - structured.length);
+        structured = [...structured, ...remaining];
+      }
+      return structured.slice(0, targetCount);
+    } else {
+      // Structured without passages / novel
+      const lexis = shuffle(pool.filter(q => q.section && q.section.includes('Lexis')));
+      const oral = shuffle(pool.filter(q => q.section && q.section.includes('Oral')));
+      const novel = includeNovel ? shuffle(pool.filter(q => isNovelQuestion(q))).slice(0, 10) : [];
+      const pass = includePassages ? shuffle(pool.filter(q => isPassageQuestion(q))).slice(0, 20) : [];
+
+      let combined = [...novel, ...pass, ...lexis, ...oral];
+      if (combined.length < targetCount) {
+        const existingIds = new Set(combined.map(q => q.id));
+        const filler = shuffle(pool.filter(q => !existingIds.has(q.id)));
+        combined = [...combined, ...filler];
+      }
+      return shuffle(combined).slice(0, targetCount);
+    }
+  };
+
   if (mode === 'full_mock') {
-    // 60 English + 40 Biology + 40 Physics + 40 Chemistry
     durationSeconds = 120 * 60;
 
-    const engPool = allQs.filter(q => q.subject_id === 'english');
-    const bioPool = allQs.filter(q => q.subject_id === 'biology');
-    const phyPool = allQs.filter(q => q.subject_id === 'physics');
-    const chemPool = allQs.filter(q => q.subject_id === 'chemistry');
-
-    const shuffle = (arr) => [...arr].sort(() => 0.5 - Math.random());
-
-    const engSelected = shuffle(engPool).slice(0, 60);
-    const bioSelected = shuffle(bioPool).slice(0, 40);
-    const phySelected = shuffle(phyPool).slice(0, 40);
-    const chemSelected = shuffle(chemPool).slice(0, 40);
+    const engSelected = getEnglishPool(60);
+    const bioSelected = shuffle(allQs.filter(q => q.subject_id === 'biology')).slice(0, 40);
+    const phySelected = shuffle(allQs.filter(q => q.subject_id === 'physics')).slice(0, 40);
+    const chemSelected = shuffle(allQs.filter(q => q.subject_id === 'chemistry')).slice(0, 40);
 
     selected = [...engSelected, ...bioSelected, ...phySelected, ...chemSelected];
   } else {
-    let pool = allQs.filter(q => q.subject_id === subject);
-    if (year) pool = pool.filter(q => q.year === parseInt(year));
     durationSeconds = Math.round(count * 40);
-    selected = [...pool].sort(() => 0.5 - Math.random()).slice(0, count);
+
+    if (subject === 'english') {
+      selected = getEnglishPool(count);
+    } else {
+      let pool = allQs.filter(q => q.subject_id === subject);
+      if (year) pool = pool.filter(q => q.year === parseInt(year));
+      selected = shuffle(pool).slice(0, count);
+    }
   }
 
   // Sanitize
@@ -205,7 +256,6 @@ export async function submitLocalExam({ exam_id, mode, time_spent_seconds, answe
     total_wrong: reviewItems.filter(r => r.is_answered && !r.is_correct).length
   };
 
-  // Save to localStorage for persistent browser history
   try {
     const existing = JSON.parse(localStorage.getItem('jamb_exam_history') || '[]');
     existing.unshift({

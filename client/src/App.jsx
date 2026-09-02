@@ -99,14 +99,17 @@ export default function App() {
     }
   };
 
-  const handleStartFullMock = () => {
-    startExam('/api/exam/generate?mode=full_mock', { mode: 'full_mock' });
+  const handleStartFullMock = ({ includePassages = true, includeNovel = true } = {}) => {
+    startExam(
+      `/api/exam/generate?mode=full_mock&include_passages=${includePassages}&include_novel=${includeNovel}`,
+      { mode: 'full_mock', includePassages, includeNovel }
+    );
   };
 
-  const handleStartSubjectDrill = (subject, count, year) => {
-    let url = `/api/exam/generate?mode=subject_drill&subject=${subject}&count=${count}`;
+  const handleStartSubjectDrill = (subject, count, year, { includePassages = true, includeNovel = true } = {}) => {
+    let url = `/api/exam/generate?mode=subject_drill&subject=${subject}&count=${count}&include_passages=${includePassages}&include_novel=${includeNovel}`;
     if (year) url += `&year=${year}`;
-    startExam(url, { mode: 'subject_drill', subject, count, year });
+    startExam(url, { mode: 'subject_drill', subject, count, year, includePassages, includeNovel });
   };
 
   // Option selection
