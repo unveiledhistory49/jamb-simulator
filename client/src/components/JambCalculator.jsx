@@ -93,59 +93,68 @@ export default function JambCalculator({ isOpen, onClose }) {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 w-72 bg-slate-800 text-white rounded-2xl shadow-2xl border border-slate-700 overflow-hidden select-none animate-in fade-in zoom-in-95 duration-150">
-      {/* Header */}
-      <div className="bg-slate-900 px-4 py-2.5 flex items-center justify-between border-b border-slate-700 cursor-move">
-        <div className="flex items-center space-x-2">
-          <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
-          <span className="text-xs font-bold tracking-wider text-slate-300 uppercase">JAMB CBT Calculator</span>
+    <>
+      {/* Mobile Backdrop Overlay */}
+      <div 
+        onClick={onClose} 
+        className="sm:hidden fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-xs animate-in fade-in duration-150"
+      />
+
+      {/* Calculator Window */}
+      <div className="fixed inset-x-4 bottom-12 sm:bottom-6 sm:right-6 sm:left-auto z-50 w-auto sm:w-72 max-w-xs mx-auto sm:mx-0 bg-slate-800 text-white rounded-2xl shadow-2xl border border-slate-700 overflow-hidden select-none animate-in fade-in zoom-in-95 duration-150">
+        {/* Header */}
+        <div className="bg-slate-900 px-4 py-2.5 flex items-center justify-between border-b border-slate-700">
+          <div className="flex items-center space-x-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+            <span className="text-xs font-bold tracking-wider text-slate-300 uppercase">JAMB CBT Calculator</span>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition"
+            title="Close Calculator"
+          >
+            <X size={16} />
+          </button>
         </div>
-        <button
-          onClick={onClose}
-          className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition"
-          title="Close Calculator"
-        >
-          <X size={16} />
-        </button>
-      </div>
 
-      {/* Screen */}
-      <div className="p-4 bg-slate-950 text-right">
-        <div className="text-xs text-slate-400 h-4 font-mono">
-          {prevValue !== null ? `${prevValue} ${operator || ''}` : ''}
+        {/* Screen */}
+        <div className="p-3.5 bg-slate-950 text-right">
+          <div className="text-xs text-slate-400 h-4 font-mono">
+            {prevValue !== null ? `${prevValue} ${operator || ''}` : ''}
+          </div>
+          <div className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-emerald-400 overflow-x-auto whitespace-nowrap scrollbar-none">
+            {display}
+          </div>
         </div>
-        <div className="text-3xl font-mono font-bold tracking-tight text-emerald-400 overflow-x-auto whitespace-nowrap scrollbar-none">
-          {display}
+
+        {/* Keypad */}
+        <div className="p-3 grid grid-cols-4 gap-1.5 sm:gap-2 bg-slate-900 text-xs sm:text-sm font-semibold">
+          <button onClick={handleClear} className="p-2 sm:p-2.5 bg-rose-900/40 text-rose-300 hover:bg-rose-800/60 rounded-xl transition">C</button>
+          <button onClick={handleSqrt} className="p-2 sm:p-2.5 bg-slate-800 text-slate-300 hover:bg-slate-700 rounded-xl transition">√</button>
+          <button onClick={handlePercent} className="p-2 sm:p-2.5 bg-slate-800 text-slate-300 hover:bg-slate-700 rounded-xl transition">%</button>
+          <button onClick={() => handleOp('/')} className="p-2 sm:p-2.5 bg-amber-600/30 text-amber-300 hover:bg-amber-600/50 rounded-xl transition">÷</button>
+
+          <button onClick={() => handleDigit('7')} className="p-2 sm:p-2.5 bg-slate-800/80 hover:bg-slate-700 rounded-xl transition">7</button>
+          <button onClick={() => handleDigit('8')} className="p-2 sm:p-2.5 bg-slate-800/80 hover:bg-slate-700 rounded-xl transition">8</button>
+          <button onClick={() => handleDigit('9')} className="p-2 sm:p-2.5 bg-slate-800/80 hover:bg-slate-700 rounded-xl transition">9</button>
+          <button onClick={() => handleOp('*')} className="p-2 sm:p-2.5 bg-amber-600/30 text-amber-300 hover:bg-amber-600/50 rounded-xl transition">×</button>
+
+          <button onClick={() => handleDigit('4')} className="p-2 sm:p-2.5 bg-slate-800/80 hover:bg-slate-700 rounded-xl transition">4</button>
+          <button onClick={() => handleDigit('5')} className="p-2 sm:p-2.5 bg-slate-800/80 hover:bg-slate-700 rounded-xl transition">5</button>
+          <button onClick={() => handleDigit('6')} className="p-2 sm:p-2.5 bg-slate-800/80 hover:bg-slate-700 rounded-xl transition">6</button>
+          <button onClick={() => handleOp('-')} className="p-2 sm:p-2.5 bg-amber-600/30 text-amber-300 hover:bg-amber-600/50 rounded-xl transition">−</button>
+
+          <button onClick={() => handleDigit('1')} className="p-2 sm:p-2.5 bg-slate-800/80 hover:bg-slate-700 rounded-xl transition">1</button>
+          <button onClick={() => handleDigit('2')} className="p-2 sm:p-2.5 bg-slate-800/80 hover:bg-slate-700 rounded-xl transition">2</button>
+          <button onClick={() => handleDigit('3')} className="p-2 sm:p-2.5 bg-slate-800/80 hover:bg-slate-700 rounded-xl transition">3</button>
+          <button onClick={() => handleOp('+')} className="p-2 sm:p-2.5 bg-amber-600/30 text-amber-300 hover:bg-amber-600/50 rounded-xl transition">+</button>
+
+          <button onClick={handleToggleSign} className="p-2 sm:p-2.5 bg-slate-800 text-slate-300 hover:bg-slate-700 rounded-xl transition">±</button>
+          <button onClick={() => handleDigit('0')} className="p-2 sm:p-2.5 bg-slate-800/80 hover:bg-slate-700 rounded-xl transition">0</button>
+          <button onClick={handleDecimal} className="p-2 sm:p-2.5 bg-slate-800 text-slate-300 hover:bg-slate-700 rounded-xl transition">.</button>
+          <button onClick={handleEquals} className="p-2 sm:p-2.5 bg-emerald-600 text-white hover:bg-emerald-500 rounded-xl transition font-bold">=</button>
         </div>
       </div>
-
-      {/* Keypad */}
-      <div className="p-3 grid grid-cols-4 gap-2 bg-slate-900 text-sm font-semibold">
-        <button onClick={handleClear} className="p-2.5 bg-rose-900/40 text-rose-300 hover:bg-rose-800/60 rounded-xl transition">C</button>
-        <button onClick={handleSqrt} className="p-2.5 bg-slate-800 text-slate-300 hover:bg-slate-700 rounded-xl transition">√</button>
-        <button onClick={handlePercent} className="p-2.5 bg-slate-800 text-slate-300 hover:bg-slate-700 rounded-xl transition">%</button>
-        <button onClick={() => handleOp('/')} className="p-2.5 bg-amber-600/30 text-amber-300 hover:bg-amber-600/50 rounded-xl transition">÷</button>
-
-        <button onClick={() => handleDigit('7')} className="p-2.5 bg-slate-800/80 hover:bg-slate-700 rounded-xl transition">7</button>
-        <button onClick={() => handleDigit('8')} className="p-2.5 bg-slate-800/80 hover:bg-slate-700 rounded-xl transition">8</button>
-        <button onClick={() => handleDigit('9')} className="p-2.5 bg-slate-800/80 hover:bg-slate-700 rounded-xl transition">9</button>
-        <button onClick={() => handleOp('*')} className="p-2.5 bg-amber-600/30 text-amber-300 hover:bg-amber-600/50 rounded-xl transition">×</button>
-
-        <button onClick={() => handleDigit('4')} className="p-2.5 bg-slate-800/80 hover:bg-slate-700 rounded-xl transition">4</button>
-        <button onClick={() => handleDigit('5')} className="p-2.5 bg-slate-800/80 hover:bg-slate-700 rounded-xl transition">5</button>
-        <button onClick={() => handleDigit('6')} className="p-2.5 bg-slate-800/80 hover:bg-slate-700 rounded-xl transition">6</button>
-        <button onClick={() => handleOp('-')} className="p-2.5 bg-amber-600/30 text-amber-300 hover:bg-amber-600/50 rounded-xl transition">−</button>
-
-        <button onClick={() => handleDigit('1')} className="p-2.5 bg-slate-800/80 hover:bg-slate-700 rounded-xl transition">1</button>
-        <button onClick={() => handleDigit('2')} className="p-2.5 bg-slate-800/80 hover:bg-slate-700 rounded-xl transition">2</button>
-        <button onClick={() => handleDigit('3')} className="p-2.5 bg-slate-800/80 hover:bg-slate-700 rounded-xl transition">3</button>
-        <button onClick={() => handleOp('+')} className="p-2.5 bg-amber-600/30 text-amber-300 hover:bg-amber-600/50 rounded-xl transition">+</button>
-
-        <button onClick={handleToggleSign} className="p-2.5 bg-slate-800 text-slate-300 hover:bg-slate-700 rounded-xl transition">±</button>
-        <button onClick={() => handleDigit('0')} className="p-2.5 bg-slate-800/80 hover:bg-slate-700 rounded-xl transition">0</button>
-        <button onClick={handleDecimal} className="p-2.5 bg-slate-800 text-slate-300 hover:bg-slate-700 rounded-xl transition">.</button>
-        <button onClick={handleEquals} className="p-2.5 bg-emerald-600 text-white hover:bg-emerald-500 rounded-xl transition font-bold">=</button>
-      </div>
-    </div>
+    </>
   );
 }

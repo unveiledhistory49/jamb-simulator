@@ -310,6 +310,9 @@ export default function App() {
             totalAnswered={totalAnsweredCount}
             totalQuestions={allQuestions.length}
             flaggedCount={flaggedTotal}
+            activeSubjectName={subjects.find(s => s.id === activeSubject)?.name || 'Subject'}
+            subjectQuestionIndex={subjectIndex + 1}
+            totalInSubject={subjectQuestions.length}
           />
 
           {/* Subject Switcher Tabs */}
