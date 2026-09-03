@@ -259,11 +259,12 @@ export default function App() {
       window.scrollTo(0, 0);
 
       // Cloud Sync to Supabase for the active candidate
-      if (currentUser?.username) {
-        saveExamToCloud(result.summary, currentUser.username);
+      const activeUser = currentUser || getStoredUser();
+      if (activeUser?.username) {
+        saveExamToCloud(result.summary, activeUser.username);
         const wrongQs = result.review.filter(r => !r.is_correct);
         if (wrongQs.length > 0) {
-          saveMistakesToCloud(wrongQs, currentUser.username);
+          saveMistakesToCloud(wrongQs.slice(0, 50), activeUser.username);
         }
       }
     } catch (err) {
