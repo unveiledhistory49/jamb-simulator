@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { 
   User, Award, Clock, ArrowLeft, RotateCcw, AlertTriangle, 
   CheckCircle2, ChevronRight, BarChart3, BookOpen, Dna, Atom, 
-  FlaskConical, Target, ShieldCheck, Sparkles, LogOut, RefreshCw, Trash2
+  FlaskConical, Target, ShieldCheck, Sparkles, LogOut, RefreshCw, 
+  Trash2, TrendingUp, ArrowUpRight, ArrowDownRight
 } from 'lucide-react';
 import { fetchUserExams, fetchUserMistakes, resolveMistakeInCloud } from '../utils/supabaseClient';
 import MathRenderer from './MathRenderer';
+import CumulativeTrendChart from './CumulativeTrendChart';
 
 export default function UserLearningDashboard({
   user,
@@ -16,7 +18,7 @@ export default function UserLearningDashboard({
   const [exams, setExams] = useState([]);
   const [mistakes, setMistakes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'mistakes' | 'history'
+  const [activeTab, setActiveTab] = useState('trends'); // 'trends' | 'overview' | 'mistakes' | 'history'
   const [selectedMistake, setSelectedMistake] = useState(null);
 
   const loadUserData = async () => {
@@ -44,6 +46,12 @@ export default function UserLearningDashboard({
   const bestScore = totalExams > 0 ? Math.max(...exams.map(e => e.total_score || 0)) : 0;
   const avgScore = totalExams > 0 
     ? Math.round(exams.reduce((sum, e) => sum + (e.total_score || 0), 0) / totalExams) 
+    : 0;
+
+  // Chronological sorting for trajectory calculation
+  const chronologicalExams = [...exams].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  const netImprovement = chronologicalExams.length > 1 
+    ? Math.round(chronologicalExams[chronologicalExams.length - 1].total_score - chronologicalExams[0].total_score)
     : 0;
 
   // Aggregate topic strengths & weaknesses across all past exams
@@ -131,7 +139,7 @@ export default function UserLearningDashboard({
               </span>
             </div>
             <p className="text-xs text-slate-500 font-mono">
-              Individual learning records saved via Supabase
+              Individual learning records & progress trajectory saved via Supabase
             </p>
           </div>
         </div>
@@ -169,8 +177,18 @@ export default function UserLearningDashboard({
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
           <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Mocks Attempted</div>
-          <div className="text-3xl font-extrabold text-slate-900 font-mono">{totalExams}</div>
-          <div className="text-xs text-slate-500">Across full mocks & drills</div>
+          <div className="text-3xl font-extrabold text-slate-900 font-mono flex items-baseline justify-between">
+            <span>{totalExams}</span>
+            {chronologicalExams.length > 1 && (
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full font-mono flex items-center space-x-0.5 ${
+                netImprovement >= 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
+              }`}>
+                {netImprovement >= 0 ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
+                <span>{netImprovement >= 0 ? `+${netImprovement}` : netImprovement} pts</span>
+              </span>
+            )}
+          </div>
+          <div className="text-xs text-slate-500">Full mocks & drills across sessions</div>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
@@ -192,6 +210,18 @@ export default function UserLearningDashboard({
 
       {/* Navigation Tabs */}
       <div className="flex border-b border-slate-200 space-x-2">
+        <button
+          onClick={() => setActiveTab('trends')}
+          className={`pb-3 px-4 text-xs sm:text-sm font-bold border-b-2 transition flex items-center space-x-1.5 ${
+            activeTab === 'trends'
+              ? 'border-emerald-600 text-emerald-800'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <TrendingUp size={16} />
+          <span>Improvement & Trends</span>
+        </button>
+
         <button
           onClick={() => setActiveTab('overview')}
           className={`pb-3 px-4 text-xs sm:text-sm font-bold border-b-2 transition ${
@@ -228,6 +258,11 @@ export default function UserLearningDashboard({
           Exam History ({exams.length})
         </button>
       </div>
+
+      {/* TAB 0: CUMULATIVE IMPROVEMENT & TRENDS */}
+      {activeTab === 'trends' && (
+        <CumulativeTrendChart exams={exams} />
+      )}
 
       {/* TAB 1: WEAKNESS DIAGNOSTICS & TOPICS */}
       {activeTab === 'overview' && (
