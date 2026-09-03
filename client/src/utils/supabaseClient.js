@@ -3,8 +3,8 @@
  * Connects directly to Supabase PostgREST for lightning-fast, zero-dependency data operations.
  */
 
-const SUPABASE_URL = "https://iuiqheutmzzmojnzneto.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1aXFoZXV0bXp6bW9qbnpuZXRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1NDQ0ODMsImV4cCI6MjA5ODEyMDQ4M30.zEq1Z2eWLr1rdrtd_7kKYZ1cWdcem0MBJ4FHHaa1zpI";
+const SUPABASE_URL = "https://alliuteqkbblxqwjbtsr.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsbGl1dGVxa2JibHhxd2pidHNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0NDg5NTgsImV4cCI6MjEwNDAyNDk1OH0.gaEZwunMe4pk1EcxgNGqWiN8vvE35IMwAWKabTVmoNs";
 
 const headers = {
   "apikey": SUPABASE_ANON_KEY,
