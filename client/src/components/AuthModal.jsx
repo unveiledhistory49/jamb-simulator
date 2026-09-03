@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   X, Lock, User, UserPlus, LogIn, AlertCircle, 
-  Sparkles, ShieldCheck, CheckCircle2, KeyRound 
+  ShieldCheck, CheckCircle2, KeyRound 
 } from 'lucide-react';
 import { signIn, signUp } from '../utils/supabaseClient';
 
@@ -19,12 +19,6 @@ export default function AuthModal({
   const [isLoading, setIsLoading] = useState(false);
 
   if (!isOpen) return null;
-
-  const handleFillDemo = () => {
-    setUsername('charles');
-    setPassword('123');
-    setErrorMsg('');
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -76,7 +70,7 @@ export default function AuthModal({
 
           <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 mb-2">
             <ShieldCheck size={13} />
-            <span>CANDIDATE PROFILE</span>
+            <span>CANDIDATE PORTAL</span>
           </div>
 
           <h2 className="text-xl font-bold tracking-tight text-white">
@@ -84,8 +78,8 @@ export default function AuthModal({
           </h2>
           <p className="text-xs text-slate-300 mt-1 leading-relaxed">
             {tab === 'login' 
-              ? `Sign in to track your scores, save your mistake bank, and view your personalized learning page.`
-              : 'Simple registration. No email verification or OAuth needed.'}
+              ? `Sign in to access your practice exams, track your scores, and save your personal mistake bank.`
+              : 'Create your candidate account to save your learning history and test diagnostics.'}
           </p>
         </div>
 
@@ -126,28 +120,6 @@ export default function AuthModal({
             </div>
           )}
 
-          {/* Quick Demo Fill Button */}
-          {tab === 'login' && (
-            <div className="p-3 bg-emerald-50/80 border border-emerald-200 rounded-2xl flex items-center justify-between">
-              <div>
-                <div className="text-xs font-bold text-emerald-950 flex items-center space-x-1">
-                  <Sparkles size={13} className="text-emerald-600" />
-                  <span>Configured User</span>
-                </div>
-                <div className="text-[11px] text-emerald-800 font-mono">
-                  charles / 123
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleFillDemo}
-                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition active:scale-95"
-              >
-                Auto Fill
-              </button>
-            </div>
-          )}
-
           {/* Username Input */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-slate-700 flex items-center space-x-1.5">
@@ -158,7 +130,7 @@ export default function AuthModal({
               type="text"
               required
               autoFocus
-              placeholder="e.g. charles"
+              placeholder="Enter your username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 rounded-xl text-sm transition outline-hidden text-slate-900"
@@ -174,7 +146,7 @@ export default function AuthModal({
             <input
               type="password"
               required
-              placeholder="••••••••"
+              placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 rounded-xl text-sm transition outline-hidden text-slate-900"
@@ -191,7 +163,7 @@ export default function AuthModal({
               <input
                 type="password"
                 required
-                placeholder="••••••••"
+                placeholder="Re-enter your password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 rounded-xl text-sm transition outline-hidden text-slate-900"
