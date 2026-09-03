@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Play, BookOpen, Clock, Award, History, Sparkles, CheckCircle2, 
   HelpCircle, ChevronRight, Dna, Atom, FlaskConical, Target, Zap, ShieldCheck,
-  SlidersHorizontal, BookMarked, FileText, User, LogIn, LogOut, BarChart3
+  SlidersHorizontal, BookMarked, FileText, User, LogIn, LogOut, BarChart3, Layers
 } from 'lucide-react';
 
 export default function HomeDashboard({
@@ -13,33 +13,21 @@ export default function HomeDashboard({
   onOpenLearning,
   onLogout
 }) {
+  // Mode toggle: 'mock' (180 Qs) or 'drill' (single subject)
+  const [activeMode, setActiveMode] = useState('mock');
   const [drillSubject, setDrillSubject] = useState('english');
   const [drillCount, setDrillCount] = useState(40);
   const [drillYear, setDrillYear] = useState('');
-  const [pastHistory, setPastHistory] = useState([]);
-  const [statusData, setStatusData] = useState(null);
 
   // English customization options (passages and novel optional)
   const [includePassages, setIncludePassages] = useState(true);
   const [includeNovel, setIncludeNovel] = useState(true);
 
-  useEffect(() => {
-    fetch('/api/status')
-      .then(res => res.json())
-      .then(data => setStatusData(data))
-      .catch(() => {});
-
-    fetch('/api/exam/history')
-      .then(res => res.json())
-      .then(data => setPastHistory(data))
-      .catch(() => {});
-  }, []);
-
   const subjects = [
-    { id: 'english', name: 'Use of English', icon: <BookOpen size={18} />, qCount: 60, color: 'text-indigo-600 bg-indigo-50 border-indigo-200' },
-    { id: 'biology', name: 'Biology', icon: <Dna size={18} />, qCount: 40, color: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
-    { id: 'physics', name: 'Physics', icon: <Atom size={18} />, qCount: 40, color: 'text-sky-600 bg-sky-50 border-sky-200' },
-    { id: 'chemistry', name: 'Chemistry', icon: <FlaskConical size={18} />, qCount: 40, color: 'text-amber-600 bg-amber-50 border-amber-200' },
+    { id: 'english', name: 'Use of English', icon: <BookOpen size={16} />, qCount: 60, color: 'text-indigo-600 bg-indigo-50 border-indigo-200' },
+    { id: 'biology', name: 'Biology', icon: <Dna size={16} />, qCount: 40, color: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
+    { id: 'physics', name: 'Physics', icon: <Atom size={16} />, qCount: 40, color: 'text-sky-600 bg-sky-50 border-sky-200' },
+    { id: 'chemistry', name: 'Chemistry', icon: <FlaskConical size={16} />, qCount: 40, color: 'text-amber-600 bg-amber-50 border-amber-200' },
   ];
 
   const handleFullMockClick = () => {
@@ -59,31 +47,31 @@ export default function HomeDashboard({
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8 space-y-8">
-      {/* Top Public Navigation & Auth State Bar */}
-      <div className="flex items-center justify-between bg-white px-5 py-3 rounded-2xl border border-slate-200 shadow-xs">
+    <div className="max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-6">
+      {/* Top Navbar */}
+      <div className="flex items-center justify-between bg-white px-4 py-2.5 sm:px-5 sm:py-3 rounded-2xl border border-slate-200 shadow-xs">
         <div className="flex items-center space-x-2">
           <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
-          <span className="font-extrabold text-slate-900 tracking-tight text-sm sm:text-base">
+          <span className="font-black text-slate-900 tracking-tight text-sm sm:text-base">
             JAMB CBT SIMULATOR
           </span>
-          <span className="hidden sm:inline text-[11px] bg-slate-100 text-slate-600 font-mono px-2 py-0.5 rounded-full border border-slate-200">
-            2025/2026 Engine
+          <span className="text-[10px] bg-slate-100 text-slate-600 font-mono px-2 py-0.5 rounded-full border border-slate-200">
+            5,800+ Qs
           </span>
         </div>
 
         <div className="flex items-center space-x-2">
           {currentUser ? (
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1.5">
               <button
                 onClick={onOpenLearning}
-                className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-900 border border-emerald-200 hover:bg-emerald-100 transition text-xs font-bold"
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-900 border border-emerald-200 hover:bg-emerald-100 transition text-xs font-bold"
               >
-                <div className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px]">
+                <div className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold">
                   {currentUser.username.charAt(0).toUpperCase()}
                 </div>
                 <span className="capitalize">{currentUser.username}</span>
-                <span className="hidden md:inline text-[10px] text-emerald-700 font-normal">• Learning Page</span>
+                <span className="hidden sm:inline text-[10px] text-emerald-700 font-normal">• Stats</span>
               </button>
 
               <button
@@ -97,278 +85,254 @@ export default function HomeDashboard({
           ) : (
             <button
               onClick={() => onRequireAuth(null)}
-              className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-xs transition active:scale-95"
+              className="flex items-center space-x-1 px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-xs transition active:scale-95"
             >
-              <LogIn size={14} />
-              <span>Sign In / Register</span>
+              <LogIn size={13} />
+              <span>Sign In</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Hero Welcome Banner */}
-      <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 text-white rounded-3xl p-6 sm:p-10 shadow-xl border border-slate-700/60 relative overflow-hidden">
-        <div className="absolute -right-10 -bottom-10 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
-
-        <div className="max-w-2xl space-y-3 sm:space-y-4 relative z-10">
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-            <ShieldCheck size={14} />
-            <span>AUTHENTIC JAMB CBT ENGINE • 2025/2026 FORMAT</span>
-          </div>
-          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight">
-            Master the UTME. <br /><span className="text-emerald-400">100% Free & Open-Source.</span>
-          </h1>
-          <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-            Practice with over <strong>5,800 authentic questions</strong> across <strong>English, Biology, Physics, and Chemistry</strong>. Continuous 120-minute countdown, 8-key keyboard navigation, on-screen calculator, and scaled scoring out of 400.
-          </p>
-
-          <div className="pt-2 sm:pt-4 flex flex-wrap gap-4 items-center">
-            <button
-              onClick={handleFullMockClick}
-              className="flex items-center space-x-2 px-6 py-3.5 rounded-2xl font-bold text-sm sm:text-base bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/20 transition active:scale-95"
-            >
-              <Play size={18} fill="currentColor" />
-              <span>Launch Full 4-Subject Mock</span>
-            </button>
-
-            <div className="flex items-center space-x-2 text-xs text-slate-400 font-mono">
-              <Clock size={14} />
-              <span>180 Qs • 120 Mins • 400 Marks</span>
-            </div>
-          </div>
-        </div>
+      {/* Hero Headline (Compact, No Jargon) */}
+      <div className="px-1 pt-1 sm:pt-2 space-y-1">
+        <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          UTME Examination Portal
+        </h1>
+        <p className="text-xs sm:text-sm text-slate-500 leading-snug">
+          Timed simulation with instant scaled scoring, 4 core subjects, and personal weakness tracking.
+        </p>
       </div>
 
-      {/* Structure & Format Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
-          <div className="text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider">Compulsory</div>
-          <div className="text-base sm:text-lg font-extrabold text-slate-900">Use of English</div>
-          <p className="text-xs text-slate-600 hidden sm:block">60 Qs • Lexis, Structure, Oral & Optional Passages</p>
-        </div>
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
-          <div className="text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider">Core Science 1</div>
-          <div className="text-base sm:text-lg font-extrabold text-slate-900">Biology</div>
-          <p className="text-xs text-slate-600 hidden sm:block">40 Qs • Genetics, Cell Biology, Ecology, Physiology</p>
-        </div>
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
-          <div className="text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider">Core Science 2</div>
-          <div className="text-base sm:text-lg font-extrabold text-slate-900">Physics</div>
-          <p className="text-xs text-slate-600 hidden sm:block">40 Qs • Mechanics, Heat, Waves, Electricity, Modern</p>
-        </div>
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
-          <div className="text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider">Core Science 3</div>
-          <div className="text-base sm:text-lg font-extrabold text-slate-900">Chemistry</div>
-          <p className="text-xs text-slate-600 hidden sm:block">40 Qs • Organic, Inorganic, Stoichiometry, Redox</p>
-        </div>
+      {/* Segmented Mode Switcher (Full Mock vs Subject Drill) */}
+      <div className="bg-slate-200/80 p-1 rounded-2xl flex items-center text-xs font-bold border border-slate-300/60">
+        <button
+          onClick={() => setActiveMode('mock')}
+          className={`flex-1 py-2.5 rounded-xl transition flex items-center justify-center space-x-2 ${
+            activeMode === 'mock'
+              ? 'bg-white text-slate-900 shadow-xs'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Target size={15} className={activeMode === 'mock' ? 'text-emerald-600' : 'text-slate-400'} />
+          <span>Full Mock (180 Qs)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveMode('drill')}
+          className={`flex-1 py-2.5 rounded-xl transition flex items-center justify-center space-x-2 ${
+            activeMode === 'drill'
+              ? 'bg-white text-slate-900 shadow-xs'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Zap size={15} className={activeMode === 'drill' ? 'text-indigo-600' : 'text-slate-400'} />
+          <span>Subject Drill</span>
+        </button>
       </div>
 
-      {/* Main Modes: Full Mock vs Subject Drill */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
-        {/* Card 1: Full Simulated Examination */}
-        <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200 shadow-sm flex flex-col justify-between space-y-5">
-          <div className="space-y-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
-                <Target size={22} />
-              </div>
+      {/* MODE 1: FULL MOCK EXAM */}
+      {activeMode === 'mock' && (
+        <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-xs space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <span className="p-1.5 rounded-lg bg-emerald-100 text-emerald-700">
+                <Target size={18} />
+              </span>
               <div>
-                <h2 className="text-lg sm:text-xl font-bold text-slate-900">Full UTME Mock Exam</h2>
-                <p className="text-xs text-slate-500">Exact replica of live JAMB CBT examination (180 Qs)</p>
+                <h2 className="text-base sm:text-lg font-bold text-slate-900">4-Subject Mock Exam</h2>
+                <p className="text-xs text-slate-500">180 questions • 120-minute timer • 400 marks</p>
               </div>
             </div>
+            <span className="hidden sm:inline text-xs font-mono font-bold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg border border-slate-200">
+              Standard UTME
+            </span>
+          </div>
 
-            <ul className="space-y-2 text-xs text-slate-600">
-              <li className="flex items-center space-x-2">
-                <CheckCircle2 size={15} className="text-emerald-600 flex-shrink-0" />
-                <span><strong>Single continuous 120-minute countdown</strong> for all 180 questions</span>
-              </li>
-              <li className="flex items-center space-x-2">
-                <CheckCircle2 size={15} className="text-emerald-600 flex-shrink-0" />
-                <span>60 English + 40 Biology + 40 Physics + 40 Chemistry</span>
-              </li>
-              <li className="flex items-center space-x-2">
-                <CheckCircle2 size={15} className="text-emerald-600 flex-shrink-0" />
-                <span>Official scaling out of 400 (100 marks per subject)</span>
-              </li>
-            </ul>
-
-            {/* English Preferences Toggle Box */}
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-800 flex items-center space-x-1.5">
-                  <SlidersHorizontal size={13} className="text-emerald-600" />
-                  <span>Use of English Options</span>
-                </span>
-                <span className="text-[10px] text-slate-500">Configure Sections</span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <label className={`flex items-start space-x-2 p-2.5 rounded-xl border cursor-pointer transition select-none ${includePassages ? 'bg-white border-emerald-300 ring-1 ring-emerald-300/40' : 'bg-slate-100/70 border-slate-200 opacity-80'}`}>
-                  <input
-                    type="checkbox"
-                    checked={includePassages}
-                    onChange={(e) => setIncludePassages(e.target.checked)}
-                    className="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5 cursor-pointer"
-                  />
-                  <div>
-                    <div className="font-semibold text-xs text-slate-800">Reading Passages</div>
-                    <div className="text-[10px] text-slate-500">Comprehension & Cloze</div>
-                  </div>
-                </label>
-
-                <label className={`flex items-start space-x-2 p-2.5 rounded-xl border cursor-pointer transition select-none ${includeNovel ? 'bg-white border-emerald-300 ring-1 ring-emerald-300/40' : 'bg-slate-100/70 border-slate-200 opacity-80'}`}>
-                  <input
-                    type="checkbox"
-                    checked={includeNovel}
-                    onChange={(e) => setIncludeNovel(e.target.checked)}
-                    className="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5 cursor-pointer"
-                  />
-                  <div>
-                    <div className="font-semibold text-xs text-slate-800">Prescribed Novel</div>
-                    <div className="text-[10px] text-slate-500">The Life Changer book</div>
-                  </div>
-                </label>
-              </div>
-
-              {(!includePassages || !includeNovel) && (
-                <p className="text-[11px] text-emerald-700 font-medium">
-                  ✓ Remaining questions will be filled with Lexis, Structure & Oral English. Total stays 60 Qs.
-                </p>
-              )}
+          {/* Compact Subject Quotas Pills */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-center">
+              <div className="text-[10px] text-slate-400 font-medium">English</div>
+              <div className="font-bold text-slate-800 font-mono">60 Questions</div>
+            </div>
+            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-center">
+              <div className="text-[10px] text-slate-400 font-medium">Biology</div>
+              <div className="font-bold text-slate-800 font-mono">40 Questions</div>
+            </div>
+            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-center">
+              <div className="text-[10px] text-slate-400 font-medium">Physics</div>
+              <div className="font-bold text-slate-800 font-mono">40 Questions</div>
+            </div>
+            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-center">
+              <div className="text-[10px] text-slate-400 font-medium">Chemistry</div>
+              <div className="font-bold text-slate-800 font-mono">40 Questions</div>
             </div>
           </div>
 
+          {/* Compact English Options Accordion / Box */}
+          <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 space-y-2">
+            <div className="flex items-center justify-between text-xs font-bold text-slate-800">
+              <span className="flex items-center space-x-1.5">
+                <SlidersHorizontal size={13} className="text-emerald-600" />
+                <span>English Options</span>
+              </span>
+              <span className="text-[10px] text-slate-400 font-normal">Optional sections</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <label className="flex items-center space-x-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={includePassages}
+                  onChange={(e) => setIncludePassages(e.target.checked)}
+                  className="rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
+                />
+                <span className="text-xs text-slate-700">Passages</span>
+              </label>
+
+              <label className="flex items-center space-x-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={includeNovel}
+                  onChange={(e) => setIncludeNovel(e.target.checked)}
+                  className="rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
+                />
+                <span className="text-xs text-slate-700">Novel Questions</span>
+              </label>
+            </div>
+          </div>
+
+          {/* Big Action Button */}
           <button
             onClick={handleFullMockClick}
-            className="w-full flex items-center justify-center space-x-2 py-3.5 rounded-2xl font-bold text-sm bg-slate-900 hover:bg-slate-800 text-white shadow-md transition active:scale-95"
+            className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-md shadow-emerald-700/20 transition active:scale-95 flex items-center justify-center space-x-2"
           >
-            <span>Start Full 180-Question Mock</span>
-            <ChevronRight size={18} />
+            <Play size={16} fill="currentColor" />
+            <span>Launch Full 180-Question Mock</span>
           </button>
         </div>
+      )}
 
-        {/* Card 2: Focused Subject Drill */}
-        <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200 shadow-sm flex flex-col justify-between space-y-5">
-          <div className="space-y-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center">
-                <Zap size={22} />
-              </div>
-              <div>
-                <h2 className="text-lg sm:text-xl font-bold text-slate-900">Custom Subject Drill</h2>
-                <p className="text-xs text-slate-500">Practice single subjects or specific past papers</p>
-              </div>
+      {/* MODE 2: CUSTOM SUBJECT DRILL */}
+      {activeMode === 'drill' && (
+        <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-xs space-y-4">
+          <div className="flex items-center space-x-2">
+            <span className="p-1.5 rounded-lg bg-indigo-100 text-indigo-700">
+              <Zap size={18} />
+            </span>
+            <div>
+              <h2 className="text-base sm:text-lg font-bold text-slate-900">Custom Subject Drill</h2>
+              <p className="text-xs text-slate-500">Practice single subjects or target problem areas</p>
             </div>
+          </div>
 
-            {/* Subject Selector */}
-            <div className="grid grid-cols-2 gap-2">
-              {subjects.map(s => (
-                <button
-                  key={s.id}
-                  onClick={() => {
-                    setDrillSubject(s.id);
-                    setDrillCount(s.id === 'english' ? 60 : 40);
-                  }}
-                  className={`p-2.5 sm:p-3 rounded-xl border text-left flex items-center space-x-2 transition ${
-                    drillSubject === s.id
-                      ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
-                      : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800'
-                  }`}
-                >
-                  <span className={drillSubject === s.id ? 'text-emerald-400' : 'text-slate-500'}>
-                    {s.icon}
-                  </span>
-                  <div className="font-semibold text-xs">{s.name}</div>
-                </button>
-              ))}
-            </div>
+          {/* Subject Selector (Compact 2x2 Grid) */}
+          <div className="grid grid-cols-2 gap-2">
+            {subjects.map(s => (
+              <button
+                key={s.id}
+                onClick={() => {
+                  setDrillSubject(s.id);
+                  setDrillCount(s.id === 'english' ? 60 : 40);
+                }}
+                className={`p-2.5 rounded-xl border text-left flex items-center space-x-2 transition ${
+                  drillSubject === s.id
+                    ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                    : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800'
+                }`}
+              >
+                <span className={drillSubject === s.id ? 'text-emerald-400' : 'text-slate-500'}>
+                  {s.icon}
+                </span>
+                <div className="font-semibold text-xs">{s.name}</div>
+              </button>
+            ))}
+          </div>
 
-            {/* Question Count Selector */}
-            <div className="flex items-center space-x-2.5">
-              <span className="text-xs text-slate-500 font-medium">Count:</span>
+          {/* Question Count Selector */}
+          <div className="space-y-1.5">
+            <span className="text-xs font-semibold text-slate-600 block">Question Count:</span>
+            <div className="grid grid-cols-4 gap-2">
               {[10, 20, 40, 60].map(cnt => (
                 <button
                   key={cnt}
                   onClick={() => setDrillCount(cnt)}
-                  className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition border ${
+                  className={`py-2 rounded-xl text-xs font-mono font-bold transition border text-center ${
                     drillCount === cnt
-                      ? 'bg-emerald-600 text-white border-emerald-600'
-                      : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                   }`}
                 >
                   {cnt} Qs
                 </button>
               ))}
             </div>
-
-            {/* Optional English toggles when English is selected */}
-            {drillSubject === 'english' && (
-              <div className="bg-indigo-50/60 border border-indigo-200/80 rounded-2xl p-3 space-y-2">
-                <span className="text-xs font-bold text-indigo-950 block">English Drill Options:</span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <label className="flex items-center space-x-2 text-xs text-indigo-900 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={includePassages}
-                      onChange={(e) => setIncludePassages(e.target.checked)}
-                      className="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
-                    />
-                    <span>Include Passages</span>
-                  </label>
-                  <label className="flex items-center space-x-2 text-xs text-indigo-900 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={includeNovel}
-                      onChange={(e) => setIncludeNovel(e.target.checked)}
-                      className="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
-                    />
-                    <span>Include Novel Questions</span>
-                  </label>
-                </div>
-              </div>
-            )}
           </div>
 
+          {/* English Drills Customization */}
+          {drillSubject === 'english' && (
+            <div className="bg-indigo-50/60 border border-indigo-200/80 rounded-xl p-3 space-y-2">
+              <span className="text-xs font-bold text-indigo-950 block">English Drill Options:</span>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="flex items-center space-x-2 text-xs text-indigo-900 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={includePassages}
+                    onChange={(e) => setIncludePassages(e.target.checked)}
+                    className="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5"
+                  />
+                  <span>Passages</span>
+                </label>
+                <label className="flex items-center space-x-2 text-xs text-indigo-900 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={includeNovel}
+                    onChange={(e) => setIncludeNovel(e.target.checked)}
+                    className="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5"
+                  />
+                  <span>Novel Questions</span>
+                </label>
+              </div>
+            </div>
+          )}
+
+          {/* Start Drill Button */}
           <button
             onClick={handleDrillClick}
-            className="w-full flex items-center justify-center space-x-2 py-3.5 rounded-2xl font-bold text-sm bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-600/20 transition active:scale-95"
+            className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-md shadow-indigo-600/20 transition active:scale-95 flex items-center justify-center space-x-2"
           >
+            <Play size={16} fill="currentColor" />
             <span>Start {subjects.find(s => s.id === drillSubject)?.name} Drill</span>
-            <ChevronRight size={18} />
           </button>
         </div>
-      </div>
+      )}
 
-      {/* Official 8-Key Keyboard Guide */}
-      <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200 shadow-sm space-y-3">
-        <div className="flex items-center space-x-2 text-slate-900 font-bold text-sm sm:text-base">
-          <HelpCircle size={18} className="text-emerald-600" />
-          <span>Official JAMB 8-Key CBT Navigation System</span>
+      {/* Desktop Only 8-Key Keyboard Guide (Hidden on mobile devices) */}
+      <div className="hidden md:block bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-3">
+        <div className="flex items-center space-x-2 text-slate-800 font-bold text-xs">
+          <HelpCircle size={15} className="text-emerald-600" />
+          <span>Desktop Keyboard Shortcuts</span>
         </div>
-        <p className="text-xs text-slate-600">
-          JAMB centers utilize a standardized 8-key keyboard system for mouse-free navigation:
-        </p>
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 font-mono text-xs">
-          <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center space-x-2">
-            <kbd className="px-2 py-0.5 bg-white border border-slate-300 rounded shadow-xs font-bold text-slate-900">A B C D</kbd>
-            <span className="text-slate-600 text-[11px]">Options</span>
+        <div className="grid grid-cols-5 gap-2 font-mono text-xs">
+          <div className="p-2 bg-slate-50 rounded-xl border border-slate-200 text-center">
+            <kbd className="font-bold text-slate-900">A B C D</kbd>
+            <div className="text-[10px] text-slate-500 mt-0.5">Select Option</div>
           </div>
-          <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center space-x-2">
-            <kbd className="px-2 py-0.5 bg-white border border-slate-300 rounded shadow-xs font-bold text-slate-900">N</kbd>
-            <span className="text-slate-600 text-[11px]">Next</span>
+          <div className="p-2 bg-slate-50 rounded-xl border border-slate-200 text-center">
+            <kbd className="font-bold text-slate-900">N</kbd>
+            <div className="text-[10px] text-slate-500 mt-0.5">Next</div>
           </div>
-          <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center space-x-2">
-            <kbd className="px-2 py-0.5 bg-white border border-slate-300 rounded shadow-xs font-bold text-slate-900">P</kbd>
-            <span className="text-slate-600 text-[11px]">Previous</span>
+          <div className="p-2 bg-slate-50 rounded-xl border border-slate-200 text-center">
+            <kbd className="font-bold text-slate-900">P</kbd>
+            <div className="text-[10px] text-slate-500 mt-0.5">Previous</div>
           </div>
-          <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center space-x-2">
-            <kbd className="px-2 py-0.5 bg-white border border-slate-300 rounded shadow-xs font-bold text-slate-900">R</kbd>
-            <span className="text-slate-600 text-[11px]">Flag Review</span>
+          <div className="p-2 bg-slate-50 rounded-xl border border-slate-200 text-center">
+            <kbd className="font-bold text-slate-900">R</kbd>
+            <div className="text-[10px] text-slate-500 mt-0.5">Flag Review</div>
           </div>
-          <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center space-x-2">
-            <kbd className="px-2 py-0.5 bg-emerald-50 border border-emerald-300 rounded shadow-xs font-bold text-emerald-800">S</kbd>
-            <span className="text-slate-600 text-[11px]">Submit</span>
+          <div className="p-2 bg-emerald-50 rounded-xl border border-emerald-200 text-center">
+            <kbd className="font-bold text-emerald-800">S</kbd>
+            <div className="text-[10px] text-emerald-700 mt-0.5">Submit</div>
           </div>
         </div>
       </div>

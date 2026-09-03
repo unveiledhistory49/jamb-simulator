@@ -129,51 +129,51 @@ export default function CumulativeTrendChart({ exams = [] }) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Top Controls & KPI Ribbon */}
-      <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-5">
-          <div className="space-y-1">
+      <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-xs space-y-4 sm:space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3 sm:pb-4">
+          <div className="space-y-0.5">
             <div className="flex items-center space-x-2">
-              <span className="p-2 rounded-xl bg-emerald-100 text-emerald-700">
-                <TrendingUp size={20} />
+              <span className="p-1.5 rounded-lg bg-emerald-100 text-emerald-700">
+                <TrendingUp size={18} />
               </span>
               <div>
-                <h2 className="text-lg sm:text-xl font-black text-slate-900">
-                  Cumulative Improvement Trajectory
+                <h2 className="text-base sm:text-lg font-black text-slate-900">
+                  Improvement Trajectory
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Track your scaled score progression, subject growth, and target readiness across sessions
+                  Scaled score progression and subject growth over time
                 </p>
               </div>
             </div>
           </div>
 
           {/* Mode Selector */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-2xl border border-slate-200 text-xs font-bold">
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold w-full sm:w-auto justify-between">
             <button
               onClick={() => setSelectedMode('full_mock')}
-              className={`px-3.5 py-1.5 rounded-xl transition ${
+              className={`flex-1 sm:flex-initial px-3 py-1 rounded-lg transition ${
                 selectedMode === 'full_mock'
                   ? 'bg-white text-slate-900 shadow-xs'
                   : 'text-slate-500 hover:text-slate-900'
               }`}
             >
-              Full Mocks (/400)
+              Full Mocks
             </button>
             <button
               onClick={() => setSelectedMode('subject_drill')}
-              className={`px-3.5 py-1.5 rounded-xl transition ${
+              className={`flex-1 sm:flex-initial px-3 py-1 rounded-lg transition ${
                 selectedMode === 'subject_drill'
                   ? 'bg-white text-slate-900 shadow-xs'
                   : 'text-slate-500 hover:text-slate-900'
               }`}
             >
-              Subject Drills
+              Drills
             </button>
             <button
               onClick={() => setSelectedMode('all')}
-              className={`px-3.5 py-1.5 rounded-xl transition ${
+              className={`flex-1 sm:flex-initial px-3 py-1 rounded-lg transition ${
                 selectedMode === 'all'
                   ? 'bg-white text-slate-900 shadow-xs'
                   : 'text-slate-500 hover:text-slate-900'

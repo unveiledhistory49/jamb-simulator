@@ -208,40 +208,40 @@ export default function UserLearningDashboard({
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="flex border-b border-slate-200 space-x-2">
+      {/* Navigation Tabs (Scrollable on mobile) */}
+      <div className="flex border-b border-slate-200 space-x-1 sm:space-x-2 overflow-x-auto no-scrollbar pb-0.5">
         <button
           onClick={() => setActiveTab('trends')}
-          className={`pb-3 px-4 text-xs sm:text-sm font-bold border-b-2 transition flex items-center space-x-1.5 ${
+          className={`whitespace-nowrap pb-2.5 sm:pb-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 transition flex items-center space-x-1.5 ${
             activeTab === 'trends'
               ? 'border-emerald-600 text-emerald-800'
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
-          <TrendingUp size={16} />
-          <span>Improvement & Trends</span>
+          <TrendingUp size={15} />
+          <span>Trends</span>
         </button>
 
         <button
           onClick={() => setActiveTab('overview')}
-          className={`pb-3 px-4 text-xs sm:text-sm font-bold border-b-2 transition ${
+          className={`whitespace-nowrap pb-2.5 sm:pb-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 transition ${
             activeTab === 'overview'
               ? 'border-emerald-600 text-emerald-800'
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
-          Weakness Diagnostics & Topics
+          Weakness Topics
         </button>
 
         <button
           onClick={() => setActiveTab('mistakes')}
-          className={`pb-3 px-4 text-xs sm:text-sm font-bold border-b-2 transition flex items-center space-x-1.5 ${
+          className={`whitespace-nowrap pb-2.5 sm:pb-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 transition flex items-center space-x-1.5 ${
             activeTab === 'mistakes'
               ? 'border-emerald-600 text-emerald-800'
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
-          <span>Mistake Bank</span>
+          <span>Mistakes</span>
           <span className="text-[10px] px-1.5 py-0.2 bg-amber-100 text-amber-800 rounded-full font-mono font-bold">
             {mistakes.length}
           </span>
@@ -249,13 +249,13 @@ export default function UserLearningDashboard({
 
         <button
           onClick={() => setActiveTab('history')}
-          className={`pb-3 px-4 text-xs sm:text-sm font-bold border-b-2 transition ${
+          className={`whitespace-nowrap pb-2.5 sm:pb-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 transition ${
             activeTab === 'history'
               ? 'border-emerald-600 text-emerald-800'
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
-          Exam History ({exams.length})
+          History ({exams.length})
         </button>
       </div>
 
@@ -266,55 +266,55 @@ export default function UserLearningDashboard({
 
       {/* TAB 1: WEAKNESS DIAGNOSTICS & TOPICS */}
       {activeTab === 'overview' && (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Mistake Bank Banner Callout */}
           {mistakes.length > 0 && (
-            <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-300 rounded-3xl p-5 flex flex-wrap items-center justify-between gap-4">
+            <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-300 rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3">
               <div className="space-y-1">
-                <div className="text-sm font-bold text-amber-950 flex items-center space-x-2">
-                  <AlertTriangle size={17} className="text-amber-600" />
-                  <span>You have {mistakes.length} unresolved mistake(s) in your bank</span>
+                <div className="text-xs sm:text-sm font-bold text-amber-950 flex items-center space-x-1.5">
+                  <AlertTriangle size={16} className="text-amber-600" />
+                  <span>{mistakes.length} unresolved mistake(s) in your bank</span>
                 </div>
-                <p className="text-xs text-amber-900/80">
+                <p className="text-[11px] sm:text-xs text-amber-900/80">
                   Re-attempt these questions until you score 100% to cement difficult concepts.
                 </p>
               </div>
 
               <button
                 onClick={handleLaunchMistakeDrill}
-                className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-md transition active:scale-95 flex items-center space-x-2"
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-xs transition active:scale-95 flex items-center space-x-1.5"
               >
-                <RotateCcw size={14} />
+                <RotateCcw size={13} />
                 <span>Drill Mistakes ({mistakes.length} Qs)</span>
               </button>
             </div>
           )}
 
           {/* Topic Strengths & Weaknesses Heatmap */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             {/* Weak Topics */}
-            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
-              <div className="flex items-center space-x-2 text-rose-800 font-bold text-sm">
-                <div className="w-2.5 h-2.5 rounded-full bg-rose-500"></div>
+            <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-xs space-y-3 sm:space-y-4">
+              <div className="flex items-center space-x-2 text-rose-800 font-bold text-xs sm:text-sm">
+                <div className="w-2 h-2 rounded-full bg-rose-500"></div>
                 <span>High-Yield Weaknesses to Revise</span>
               </div>
-              <p className="text-xs text-slate-500">Topics where your accuracy is currently below 50%:</p>
+              <p className="text-[11px] sm:text-xs text-slate-500">Topics where your accuracy is currently below 50%:</p>
 
               {weakTopics.length === 0 ? (
-                <div className="p-4 bg-slate-50 rounded-2xl text-xs text-slate-500 text-center">
+                <div className="p-3.5 bg-slate-50 rounded-xl text-xs text-slate-500 text-center">
                   {totalExams === 0 ? 'Take your first mock to generate topic weakness diagnostics.' : 'No critical weaknesses detected! Keep practicing.'}
                 </div>
               ) : (
-                <div className="space-y-2.5">
+                <div className="space-y-2">
                   {weakTopics.map(t => (
-                    <div key={t.topic} className="p-3 rounded-xl border border-rose-100 bg-rose-50/50 flex items-center justify-between">
+                    <div key={t.topic} className="p-2.5 sm:p-3 rounded-xl border border-rose-100 bg-rose-50/50 flex items-center justify-between">
                       <div>
                         <div className="font-semibold text-xs text-slate-900">{t.topic}</div>
                         <div className="text-[10px] text-slate-500 capitalize">{t.subject}</div>
                       </div>
                       <div className="text-right">
                         <div className="text-xs font-bold text-rose-700 font-mono">{t.accuracy}%</div>
-                        <div className="text-[10px] text-slate-400 font-mono">{t.total} questions</div>
+                        <div className="text-[10px] text-slate-400 font-mono">{t.total} Qs</div>
                       </div>
                     </div>
                   ))}
@@ -323,28 +323,28 @@ export default function UserLearningDashboard({
             </div>
 
             {/* Strong Topics */}
-            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
-              <div className="flex items-center space-x-2 text-emerald-800 font-bold text-sm">
-                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+            <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-xs space-y-3 sm:space-y-4">
+              <div className="flex items-center space-x-2 text-emerald-800 font-bold text-xs sm:text-sm">
+                <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
                 <span>Mastered Topics</span>
               </div>
-              <p className="text-xs text-slate-500">Topics where your accuracy is 75% or higher:</p>
+              <p className="text-[11px] sm:text-xs text-slate-500">Topics where your accuracy is 75% or higher:</p>
 
               {strongTopics.length === 0 ? (
-                <div className="p-4 bg-slate-50 rounded-2xl text-xs text-slate-500 text-center">
+                <div className="p-3.5 bg-slate-50 rounded-xl text-xs text-slate-500 text-center">
                   {totalExams === 0 ? 'Take your first mock to track mastered topics.' : 'Keep practicing to master topics at 75%+.'}
                 </div>
               ) : (
-                <div className="space-y-2.5">
+                <div className="space-y-2">
                   {strongTopics.map(t => (
-                    <div key={t.topic} className="p-3 rounded-xl border border-emerald-100 bg-emerald-50/50 flex items-center justify-between">
+                    <div key={t.topic} className="p-2.5 sm:p-3 rounded-xl border border-emerald-100 bg-emerald-50/50 flex items-center justify-between">
                       <div>
                         <div className="font-semibold text-xs text-slate-900">{t.topic}</div>
                         <div className="text-[10px] text-slate-500 capitalize">{t.subject}</div>
                       </div>
                       <div className="text-right">
                         <div className="text-xs font-bold text-emerald-700 font-mono">{t.accuracy}%</div>
-                        <div className="text-[10px] text-slate-400 font-mono">{t.total} questions</div>
+                        <div className="text-[10px] text-slate-400 font-mono">{t.total} Qs</div>
                       </div>
                     </div>
                   ))}
@@ -357,10 +357,10 @@ export default function UserLearningDashboard({
 
       {/* TAB 2: MISTAKE BANK */}
       {activeTab === 'mistakes' && (
-        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
+        <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-xs space-y-4 sm:space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3 sm:pb-4">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Personal Mistake Vault</h2>
+              <h2 className="text-base sm:text-lg font-bold text-slate-900">Personal Mistake Vault</h2>
               <p className="text-xs text-slate-500">Review questions you missed during your previous mock exams</p>
             </div>
 
@@ -433,8 +433,8 @@ export default function UserLearningDashboard({
 
       {/* TAB 3: EXAM HISTORY */}
       {activeTab === 'history' && (
-        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
-          <h2 className="text-lg font-bold text-slate-900">Cloud Synced Exam History</h2>
+        <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-xs space-y-4">
+          <h2 className="text-base sm:text-lg font-bold text-slate-900">Exam History</h2>
           <p className="text-xs text-slate-500">Every mock exam you submit is automatically archived in Supabase</p>
 
           {exams.length === 0 ? (

@@ -61,42 +61,42 @@ export default function ResultDashboard({
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-8 animate-in fade-in duration-200">
+    <div className="max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-6 animate-in fade-in duration-200">
       {/* Top Banner: Score & Remarks */}
-      <div className="bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 text-white rounded-3xl p-8 shadow-xl border border-emerald-800/40 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 text-white rounded-2xl p-4 sm:p-6 shadow-md border border-emerald-800/40 relative overflow-hidden">
         <div className="absolute top-0 right-0 -mt-10 -mr-10 w-60 h-60 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
-          <div className="text-center md:text-left space-y-2">
-            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-              <Award size={14} />
-              <span>OFFICIAL CBT EXAMINATION REPORT</span>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
+          <div className="text-center sm:text-left space-y-1.5">
+            <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              <Award size={13} />
+              <span>OFFICIAL CBT REPORT</span>
             </div>
-            <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
               Exam Results & Performance
             </h1>
-            <p className="text-slate-300 text-sm max-w-xl">
+            <p className="text-slate-300 text-xs sm:text-sm max-w-lg">
               {summary.remarks}
             </p>
           </div>
 
           {/* Grand Scaled Score Display */}
-          <div className="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-6 text-center min-w-[240px] shadow-inner">
-            <div className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">
+          <div className="bg-slate-800/90 border border-slate-700/80 rounded-xl p-4 text-center w-full sm:w-auto min-w-[200px] shadow-inner">
+            <div className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">
               {summary.mode === 'full_mock' ? 'Aggregated UTME Score' : 'Subject Scaled Score'}
             </div>
-            <div className="text-5xl font-mono font-extrabold text-emerald-400 tracking-tight">
+            <div className="text-4xl sm:text-5xl font-mono font-extrabold text-emerald-400 tracking-tight">
               {summary.total_score}
-              <span className="text-2xl text-slate-500 font-normal"> / {summary.max_score}</span>
+              <span className="text-xl text-slate-500 font-normal"> / {summary.max_score}</span>
             </div>
-            <div className="mt-2 text-xs font-semibold text-slate-300">
+            <div className="mt-1 text-xs font-semibold text-slate-300">
               Score: <strong className="text-emerald-300">{summary.percentage}%</strong> • {summary.grade}
             </div>
           </div>
         </div>
 
         {/* Quick Stats Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8 pt-6 border-t border-slate-800/80 text-center">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4 pt-4 border-t border-slate-800/80 text-center">
           <div className="p-3 bg-slate-800/50 rounded-xl">
             <div className="text-xs text-slate-400">Total Answered</div>
             <div className="text-xl font-bold font-mono text-white mt-1">
