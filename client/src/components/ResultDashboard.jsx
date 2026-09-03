@@ -10,7 +10,9 @@ import MathRenderer from './MathRenderer';
 export default function ResultDashboard({
   resultData,
   onRetakeExam,
-  onGoHome
+  onGoHome,
+  currentUser,
+  onOpenLearning
 }) {
   const [reviewFilter, setReviewFilter] = useState('all'); // 'all', 'wrong', 'correct', 'unanswered'
   const [expandedPassageId, setExpandedPassageId] = useState(null);
@@ -429,18 +431,29 @@ export default function ResultDashboard({
 
         {/* Bottom Actions */}
         <div className="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-slate-200">
-          <button
-            onClick={onGoHome}
-            className="flex items-center space-x-2 px-6 py-3 rounded-xl text-sm font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 transition"
-          >
-            <Home size={16} />
-            <span>Return to Dashboard</span>
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={onGoHome}
+              className="flex items-center space-x-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 transition"
+            >
+              <Home size={15} />
+              <span>Dashboard</span>
+            </button>
+            {currentUser && onOpenLearning && (
+              <button
+                onClick={onOpenLearning}
+                className="flex items-center space-x-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 transition"
+              >
+                <BarChart3 size={15} className="text-emerald-700" />
+                <span>My Learning Page</span>
+              </button>
+            )}
+          </div>
           <button
             onClick={onRetakeExam}
-            className="flex items-center space-x-2 px-6 py-3 rounded-xl text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-700/20 transition active:scale-95"
+            className="flex items-center space-x-2 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-700/20 transition active:scale-95"
           >
-            <RotateCcw size={16} />
+            <RotateCcw size={15} />
             <span>Take Another Mock Exam</span>
           </button>
         </div>

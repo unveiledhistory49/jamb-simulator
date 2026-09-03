@@ -2,13 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { 
   Play, BookOpen, Clock, Award, History, Sparkles, CheckCircle2, 
   HelpCircle, ChevronRight, Dna, Atom, FlaskConical, Target, Zap, ShieldCheck,
-  SlidersHorizontal, BookMarked, FileText
+  SlidersHorizontal, BookMarked, FileText, User, LogIn, LogOut, BarChart3
 } from 'lucide-react';
 
 export default function HomeDashboard({
+  currentUser,
   onStartFullMock,
   onStartSubjectDrill,
-  onViewHistory
+  onRequireAuth,
+  onOpenLearning,
+  onLogout
 }) {
   const [drillSubject, setDrillSubject] = useState('english');
   const [drillCount, setDrillCount] = useState(40);
@@ -40,15 +43,69 @@ export default function HomeDashboard({
   ];
 
   const handleFullMockClick = () => {
-    onStartFullMock({ includePassages, includeNovel });
+    if (!currentUser) {
+      onRequireAuth(() => onStartFullMock({ includePassages, includeNovel }));
+    } else {
+      onStartFullMock({ includePassages, includeNovel });
+    }
   };
 
   const handleDrillClick = () => {
-    onStartSubjectDrill(drillSubject, drillCount, drillYear, { includePassages, includeNovel });
+    if (!currentUser) {
+      onRequireAuth(() => onStartSubjectDrill(drillSubject, drillCount, drillYear, { includePassages, includeNovel }));
+    } else {
+      onStartSubjectDrill(drillSubject, drillCount, drillYear, { includePassages, includeNovel });
+    }
   };
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8 space-y-8">
+      {/* Top Public Navigation & Auth State Bar */}
+      <div className="flex items-center justify-between bg-white px-5 py-3 rounded-2xl border border-slate-200 shadow-xs">
+        <div className="flex items-center space-x-2">
+          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
+          <span className="font-extrabold text-slate-900 tracking-tight text-sm sm:text-base">
+            JAMB CBT SIMULATOR
+          </span>
+          <span className="hidden sm:inline text-[11px] bg-slate-100 text-slate-600 font-mono px-2 py-0.5 rounded-full border border-slate-200">
+            2025/2026 Engine
+          </span>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          {currentUser ? (
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={onOpenLearning}
+                className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-900 border border-emerald-200 hover:bg-emerald-100 transition text-xs font-bold"
+              >
+                <div className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px]">
+                  {currentUser.username.charAt(0).toUpperCase()}
+                </div>
+                <span className="capitalize">{currentUser.username}</span>
+                <span className="hidden md:inline text-[10px] text-emerald-700 font-normal">• Learning Page</span>
+              </button>
+
+              <button
+                onClick={onLogout}
+                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                title="Log Out"
+              >
+                <LogOut size={16} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => onRequireAuth(null)}
+              className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-xs transition active:scale-95"
+            >
+              <LogIn size={14} />
+              <span>Sign In / Register</span>
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Hero Welcome Banner */}
       <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 text-white rounded-3xl p-6 sm:p-10 shadow-xl border border-slate-700/60 relative overflow-hidden">
         <div className="absolute -right-10 -bottom-10 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
@@ -315,37 +372,6 @@ export default function HomeDashboard({
           </div>
         </div>
       </div>
-
-      {/* Past Mock Attempts */}
-      {pastHistory.length > 0 && (
-        <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200 shadow-sm space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2 font-bold text-slate-900 text-sm sm:text-base">
-              <History size={18} className="text-emerald-600" />
-              <span>Recent Mock Attempts & Score Progression</span>
-            </div>
-          </div>
-          <div className="divide-y divide-slate-100">
-            {pastHistory.slice(0, 5).map(hist => (
-              <div key={hist.id} className="py-2.5 flex items-center justify-between text-xs sm:text-sm">
-                <div>
-                  <div className="font-semibold text-slate-800 uppercase tracking-wide text-[11px]">
-                    {hist.mode === 'full_mock' ? 'Full 4-Subject Mock' : 'Subject Drill'}
-                  </div>
-                  <div className="text-[11px] text-slate-400 font-mono">
-                    {new Date(hist.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                </div>
-                <div className="text-right font-mono">
-                  <div className="text-base sm:text-lg font-bold text-emerald-600">
-                    {hist.total_score} <span className="text-xs text-slate-400">/ {hist.max_score}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -7,14 +7,22 @@ import QuestionPalette from './components/QuestionPalette';
 import SubmitModal from './components/SubmitModal';
 import ResultDashboard from './components/ResultDashboard';
 import JambCalculator from './components/JambCalculator';
+import AuthModal from './components/AuthModal';
+import UserLearningDashboard from './components/UserLearningDashboard';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { generateLocalExam, submitLocalExam } from './utils/localExamEngine';
+import { getStoredUser, logoutUser, saveExamToCloud, saveMistakesToCloud } from './utils/supabaseClient';
 
 export default function App() {
-  const [view, setView] = useState('home'); // 'home' | 'exam' | 'result'
+  const [view, setView] = useState('home'); // 'home' | 'exam' | 'result' | 'learning'
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
+
+  // User Auth state (accessible publicly, auth required on exam launch)
+  const [currentUser, setCurrentUser] = useState(() => getStoredUser());
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null);
 
   // Exam state
   const [examData, setExamData] = useState(null);
@@ -62,7 +70,7 @@ export default function App() {
   // 2. Auto Submit on Time Expiry
   const handleAutoSubmit = useCallback(() => {
     handleFinalSubmit();
-  }, [examData, answers, timeSpent]);
+  }, [examData, answers, timeSpent, currentUser]);
 
   // 3. Start Exam Function (with seamless Vercel offline fallback)
   const startExam = async (url, fallbackOptions = { mode: 'full_mock' }) => {
@@ -97,6 +105,40 @@ export default function App() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleStartExamDirect = (directExamData) => {
+    setExamData(directExamData);
+    setTimeRemaining(directExamData.duration_seconds || 3600);
+    setTimeSpent(0);
+    setAnswers({});
+    setFlagged({});
+    setActiveSubject(directExamData.subjects[0]?.id || 'mistakes');
+    setSubjectIndex(0);
+    setView('exam');
+    window.scrollTo(0, 0);
+  };
+
+  // Auth gate wrapper
+  const handleRequireAuth = (action) => {
+    setPendingAction(() => action);
+    setIsAuthModalOpen(true);
+  };
+
+  const handleAuthSuccess = (user) => {
+    setCurrentUser(user);
+    setIsAuthModalOpen(false);
+    if (pendingAction) {
+      const act = pendingAction;
+      setPendingAction(null);
+      act();
+    }
+  };
+
+  const handleLogout = () => {
+    logoutUser();
+    setCurrentUser(null);
+    setView('home');
   };
 
   const handleStartFullMock = ({ includePassages = true, includeNovel = true } = {}) => {
@@ -143,7 +185,6 @@ export default function App() {
     if (subjectIndex < subjectQuestions.length - 1) {
       setSubjectIndex(subjectIndex + 1);
     } else {
-      // Transition to next subject if available
       const currSubjIndex = subjects.findIndex(s => s.id === activeSubject);
       if (currSubjIndex < subjects.length - 1) {
         const nextSubj = subjects[currSubjIndex + 1];
@@ -158,7 +199,6 @@ export default function App() {
     if (subjectIndex > 0) {
       setSubjectIndex(subjectIndex - 1);
     } else {
-      // Transition to previous subject if available
       const currSubjIndex = subjects.findIndex(s => s.id === activeSubject);
       if (currSubjIndex > 0) {
         const prevSubj = subjects[currSubjIndex - 1];
@@ -217,6 +257,15 @@ export default function App() {
       setIsSubmitModalOpen(false);
       setView('result');
       window.scrollTo(0, 0);
+
+      // Cloud Sync to Supabase for the active candidate
+      if (currentUser?.username) {
+        saveExamToCloud(result.summary, currentUser.username);
+        const wrongQs = result.review.filter(r => !r.is_correct);
+        if (wrongQs.length > 0) {
+          saveMistakesToCloud(wrongQs, currentUser.username);
+        }
+      }
     } catch (err) {
       console.error(err);
       alert('Error submitting exam: ' + err.message);
@@ -230,69 +279,81 @@ export default function App() {
     if (view !== 'exam') return;
 
     const handleKeyDown = (e) => {
-      // Disable hotkeys if user is typing in an input
       if (['input', 'textarea', 'select'].includes(e.target.tagName.toLowerCase())) {
         return;
       }
 
       const key = e.key.toLowerCase();
 
-      // Options A, B, C, D
       if (['a', 'b', 'c', 'd'].includes(key)) {
         e.preventDefault();
         handleSelectOption(key);
-      }
-      // N for Next
-      else if (key === 'n') {
+      } else if (key === 'n') {
         e.preventDefault();
         handleNext();
-      }
-      // P for Previous
-      else if (key === 'p') {
+      } else if (key === 'p') {
         e.preventDefault();
         handlePrevious();
-      }
-      // R for Flag for Review
-      else if (key === 'r') {
+      } else if (key === 'r') {
         e.preventDefault();
         handleToggleFlag();
-      }
-      // S for Submit Exam
-      else if (key === 's') {
+      } else if (key === 's') {
         e.preventDefault();
         setIsSubmitModalOpen(true);
-      }
-      // Escape for closing modals
-      else if (key === 'escape') {
-        setIsSubmitModalOpen(false);
-        setIsCalculatorOpen(false);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [view, currentQuestion, subjectIndex, subjectQuestions, activeSubject, subjects, allQuestions]);
+  }, [view, subjectIndex, activeSubject, currentQuestion, subjectQuestions, subjects]);
 
-  const totalAnsweredCount = allQuestions.filter(q => answers[q.id] !== undefined && answers[q.id] !== '').length;
-  const flaggedTotal = allQuestions.filter(q => flagged[q.id]).length;
+  const totalAnsweredCount = Object.keys(answers).length;
+  const flaggedTotal = Object.values(flagged).filter(Boolean).length;
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col font-sans text-slate-900">
-      {/* Loading Overlay */}
+    <div className="min-h-screen bg-slate-100 flex flex-col font-sans text-slate-800 antialiased selection:bg-emerald-500 selection:text-white">
+      {/* Loading Screen */}
       {isLoading && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex flex-col items-center justify-center text-white">
-          <Loader2 size={48} className="animate-spin text-emerald-400 mb-4" />
-          <h2 className="text-xl font-bold tracking-tight">Generating UTME CBT Examination Session...</h2>
-          <p className="text-xs text-slate-300 mt-1">Balancing 180 questions across English, Biology, Physics & Chemistry</p>
+        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex flex-col items-center justify-center text-white space-y-4">
+          <Loader2 className="animate-spin text-emerald-400" size={48} />
+          <div className="text-lg font-bold">Compiling Official CBT Examination Paper...</div>
+          <div className="text-xs text-slate-400 font-mono">Loading authentic questions & passages</div>
         </div>
       )}
 
-      {/* VIEW: HOME DASHBOARD */}
+      {/* Error Alert */}
+      {errorMsg && (
+        <div className="bg-rose-600 text-white px-4 py-2.5 text-xs font-semibold flex items-center justify-between shadow-md">
+          <div className="flex items-center space-x-2 max-w-7xl mx-auto w-full">
+            <AlertCircle size={16} />
+            <span>{errorMsg}</span>
+          </div>
+          <button onClick={() => setErrorMsg(null)} className="text-white hover:underline text-xs">Dismiss</button>
+        </div>
+      )}
+
+      {/* VIEW: PUBLIC HOME DASHBOARD */}
       {view === 'home' && (
         <main className="flex-1">
           <HomeDashboard
+            currentUser={currentUser}
             onStartFullMock={handleStartFullMock}
             onStartSubjectDrill={handleStartSubjectDrill}
+            onRequireAuth={handleRequireAuth}
+            onOpenLearning={() => setView('learning')}
+            onLogout={handleLogout}
+          />
+        </main>
+      )}
+
+      {/* VIEW: INDIVIDUAL USER LEARNING DASHBOARD */}
+      {view === 'learning' && currentUser && (
+        <main className="flex-1">
+          <UserLearningDashboard
+            user={currentUser}
+            onBackToHome={() => setView('home')}
+            onStartExamWithQuestions={handleStartExamDirect}
+            onLogout={handleLogout}
           />
         </main>
       )}
@@ -302,7 +363,7 @@ export default function App() {
         <div className="flex-1 flex flex-col">
           {/* Official CBT Top Bar */}
           <CbtHeader
-            candidateName="Engr. Candidate (Science UTME)"
+            candidateName={currentUser ? `${currentUser.username.toUpperCase()} (Science Candidate)` : "Candidate (Science UTME)"}
             regNumber="2026/UTME/948201"
             timeRemaining={timeRemaining}
             onToggleCalculator={() => setIsCalculatorOpen(!isCalculatorOpen)}
@@ -393,9 +454,21 @@ export default function App() {
               }
             }}
             onGoHome={() => setView('home')}
+            currentUser={currentUser}
+            onOpenLearning={() => setView('learning')}
           />
         </main>
       )}
+
+      {/* Auth Modal (Prompted when user clicks practice or exam) */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => {
+          setIsAuthModalOpen(false);
+          setPendingAction(null);
+        }}
+        onSuccess={handleAuthSuccess}
+      />
 
       {/* Footer */}
       <footer className="bg-white border-t border-slate-200 text-center py-4 text-xs text-slate-500">
