@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Trophy, CheckCircle2, XCircle, Clock, Award, BarChart3, 
   RotateCcw, Home, Filter, BookOpen, AlertCircle, ChevronDown, ChevronUp,
-  Bookmark, ArrowRight, Zap, Target
+  Bookmark, ArrowRight, Zap, Target, Star
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import MathRenderer from './MathRenderer';
@@ -16,7 +16,9 @@ export default function ResultDashboard({
   currentUser,
   onOpenLearning,
   onStartRevisionDrill,
-  onStartSingleTopicDrill
+  onStartSingleTopicDrill,
+  starredIds = new Set(),
+  onToggleStar
 }) {
   const [activeTab, setActiveTab] = useState('review'); // 'review' | 'pacing' | 'topics'
   const [reviewFilter, setReviewFilter] = useState('all'); // 'all', 'wrong', 'correct', 'unanswered'
@@ -393,6 +395,18 @@ export default function ResultDashboard({
                     )}
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5">
+                    <button
+                      onClick={() => onToggleStar && onToggleStar(q)}
+                      className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition active:scale-95 cursor-pointer ${
+                        starredIds.has(String(q.id))
+                          ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-transparent'
+                      }`}
+                      title={starredIds.has(String(q.id)) ? "Remove from Starred Library" : "Star tricky question to revisit anytime"}
+                    >
+                      <Star size={13} className={starredIds.has(String(q.id)) ? 'fill-amber-500 text-amber-500' : 'text-slate-400'} />
+                      <span>{starredIds.has(String(q.id)) ? 'Starred' : 'Star'}</span>
+                    </button>
                     {typeof q.time_spent_seconds === 'number' && q.time_spent_seconds > 0 && (
                       <span className="font-mono text-[11px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
                         ⏱️ {q.time_spent_seconds}s

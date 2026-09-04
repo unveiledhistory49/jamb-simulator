@@ -250,3 +250,104 @@ export async function resolveMistakeInCloud(mistakeId, username) {
     console.warn("Could not resolve mistake in Supabase:", err);
   }
 }
+
+// 8. Local Bookmarks Cache
+export function getLocalBookmarks(username) {
+  try {
+    const key = `jamb_cbt_starred_${(username || 'guest').toLowerCase()}`;
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+export function setLocalBookmarks(username, bookmarks) {
+  try {
+    const key = `jamb_cbt_starred_${(username || 'guest').toLowerCase()}`;
+    localStorage.setItem(key, JSON.stringify(bookmarks));
+  } catch (e) {}
+}
+
+// 9. Save Bookmark to Supabase
+export async function saveBookmarkToCloud(question, username) {
+  if (!question || !username) return null;
+
+  try {
+    const cleanUser = username.toLowerCase();
+    const qId = String(question.id);
+    const row = {
+      id: `${cleanUser}_${qId}`,
+      username: cleanUser,
+      question_id: qId,
+      subject_id: question.subject_id,
+      topic: question.topic || 'General',
+      year: question.year || null,
+      question_text: question.question || question.question_text,
+      options: question.options || {
+        a: question.option_a,
+        b: question.option_b,
+        c: question.option_c,
+        d: question.option_d
+      },
+      correct_answer: question.correct_answer || '',
+      explanation: question.explanation || '',
+      passage_id: question.passage_id || null
+    };
+
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/jamb_user_bookmarks`, {
+      method: "POST",
+      headers: {
+        ...headers,
+        "Prefer": "resolution=merge-duplicates"
+      },
+      body: JSON.stringify(row)
+    });
+
+    return res.ok;
+  } catch (err) {
+    console.warn("Could not save bookmark to Supabase:", err);
+    return false;
+  }
+}
+
+// 10. Remove Bookmark from Supabase
+export async function removeBookmarkFromCloud(questionId, username) {
+  if (!questionId || !username) return false;
+
+  try {
+    const cleanUser = username.toLowerCase();
+    const rowId = `${cleanUser}_${questionId}`;
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/jamb_user_bookmarks?id=eq.${encodeURIComponent(rowId)}`,
+      {
+        method: "DELETE",
+        headers
+      }
+    );
+
+    return res.ok;
+  } catch (err) {
+    console.warn("Could not delete bookmark from Supabase:", err);
+    return false;
+  }
+}
+
+// 11. Fetch User Bookmarks from Supabase
+export async function fetchUserBookmarks(username) {
+  if (!username) return [];
+
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/jamb_user_bookmarks?username=eq.${encodeURIComponent(username.toLowerCase())}&order=created_at.desc`,
+      { headers }
+    );
+
+    if (!res.ok) return [];
+    return await res.json();
+  } catch (err) {
+    console.warn("Could not fetch bookmarks:", err);
+    return [];
+  }
+}
+

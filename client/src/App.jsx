@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import HomeDashboard from './components/HomeDashboard';
 import CbtHeader from './components/CbtHeader';
 import SubjectTabs from './components/SubjectTabs';
@@ -11,7 +11,7 @@ import AuthModal from './components/AuthModal';
 import UserLearningDashboard from './components/UserLearningDashboard';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { generateLocalExam, submitLocalExam } from './utils/localExamEngine';
-import { getStoredUser, logoutUser, saveExamToCloud, saveMistakesToCloud } from './utils/supabaseClient';
+import { getStoredUser, logoutUser, saveExamToCloud, saveMistakesToCloud, getLocalBookmarks, setLocalBookmarks, saveBookmarkToCloud, removeBookmarkFromCloud, fetchUserBookmarks } from './utils/supabaseClient';
 
 export default function App() {
   const [view, setView] = useState('home'); // 'home' | 'exam' | 'result' | 'learning'
@@ -23,6 +23,16 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(() => getStoredUser());
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
+
+  // Starred / Bookmarked questions state
+  const [starredQuestions, setStarredQuestions] = useState(() => {
+    const user = getStoredUser();
+    return getLocalBookmarks(user?.username);
+  });
+
+  const starredIds = useMemo(() => {
+    return new Set(starredQuestions.map(q => String(q.id || q.question_id)));
+  }, [starredQuestions]);
 
   // Exam state
   const [examData, setExamData] = useState(null);
@@ -154,6 +164,51 @@ export default function App() {
     setCurrentUser(null);
     setView('home');
   };
+
+  // Sync bookmarks from cloud on user change
+  useEffect(() => {
+    const activeUsername = currentUser?.username;
+    if (!activeUsername) {
+      setStarredQuestions(getLocalBookmarks('guest'));
+      return;
+    }
+    
+    // Fetch from Supabase and merge with local
+    fetchUserBookmarks(activeUsername).then(cloudBookmarks => {
+      if (cloudBookmarks && cloudBookmarks.length > 0) {
+        const local = getLocalBookmarks(activeUsername);
+        const map = new Map();
+        local.forEach(q => map.set(String(q.question_id || q.id), q));
+        cloudBookmarks.forEach(q => map.set(String(q.question_id || q.id), q));
+        const merged = Array.from(map.values());
+        setStarredQuestions(merged);
+        setLocalBookmarks(activeUsername, merged);
+      }
+    }).catch(err => console.warn("Could not sync bookmarks from cloud:", err));
+  }, [currentUser]);
+
+  // Toggle Star on any question (from Exam or Review)
+  const handleToggleStar = useCallback(async (question) => {
+    if (!question) return;
+    const qId = String(question.id || question.question_id);
+    const isAlreadyStarred = starredIds.has(qId);
+
+    let updated;
+    if (isAlreadyStarred) {
+      updated = starredQuestions.filter(q => String(q.id || q.question_id) !== qId);
+      if (currentUser?.username) {
+        removeBookmarkFromCloud(qId, currentUser.username);
+      }
+    } else {
+      updated = [question, ...starredQuestions];
+      if (currentUser?.username) {
+        saveBookmarkToCloud(question, currentUser.username);
+      }
+    }
+
+    setStarredQuestions(updated);
+    setLocalBookmarks(currentUser?.username, updated);
+  }, [starredQuestions, starredIds, currentUser]);
 
   const handleStartFullMock = ({ includePassages = true, includeNovel = true } = {}) => {
     startExam(
@@ -378,6 +433,7 @@ export default function App() {
             onRequireAuth={handleRequireAuth}
             onOpenLearning={() => setView('learning')}
             onLogout={handleLogout}
+            starredCount={starredQuestions.length}
           />
         </main>
       )}
@@ -392,6 +448,8 @@ export default function App() {
             onStartRevisionDrill={handleStartRevisionDrill}
             onStartSingleTopicDrill={handleStartSingleTopicDrill}
             onLogout={handleLogout}
+            starredQuestions={starredQuestions}
+            onToggleStar={handleToggleStar}
           />
         </main>
       )}
@@ -435,9 +493,11 @@ export default function App() {
               totalInSubject={subjectQuestions.length}
               userAnswer={currentQuestion ? answers[currentQuestion.id] : null}
               isFlagged={currentQuestion ? Boolean(flagged[currentQuestion.id]) : false}
+              isStarred={Boolean(currentQuestion && starredIds.has(String(currentQuestion.id)))}
               onSelectOption={handleSelectOption}
               onClearAnswer={handleClearAnswer}
               onToggleFlag={handleToggleFlag}
+              onToggleStar={handleToggleStar}
               onNext={handleNext}
               onPrevious={handlePrevious}
               hasPrevious={subjectIndex > 0 || subjects.findIndex(s => s.id === activeSubject) > 0}
@@ -496,6 +556,8 @@ export default function App() {
             onOpenLearning={() => setView('learning')}
             onStartRevisionDrill={handleStartRevisionDrill}
             onStartSingleTopicDrill={handleStartSingleTopicDrill}
+            starredIds={starredIds}
+            onToggleStar={handleToggleStar}
           />
         </main>
       )}

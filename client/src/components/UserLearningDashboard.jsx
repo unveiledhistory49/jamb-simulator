@@ -3,13 +3,14 @@ import {
   User, Award, Clock, ArrowLeft, RotateCcw, AlertTriangle, 
   CheckCircle2, ChevronRight, BarChart3, BookOpen, Dna, Atom, 
   FlaskConical, Target, ShieldCheck, Sparkles, LogOut, RefreshCw, 
-  Trash2, TrendingUp, ArrowUpRight, ArrowDownRight, Zap
+  Trash2, TrendingUp, ArrowUpRight, ArrowDownRight, Zap, Star
 } from 'lucide-react';
-import { fetchUserExams, fetchUserMistakes, resolveMistakeInCloud } from '../utils/supabaseClient';
+import { fetchUserExams, fetchUserMistakes, resolveMistakeInCloud, fetchUserBookmarks, getLocalBookmarks, saveBookmarkToCloud, removeBookmarkFromCloud } from '../utils/supabaseClient';
 import MathRenderer from './MathRenderer';
 import CumulativeTrendChart from './CumulativeTrendChart';
 import TopicHeatmap from './TopicHeatmap';
 import PacingAnalytics from './PacingAnalytics';
+import StarredQuestionsLibrary from './StarredQuestionsLibrary';
 
 export default function UserLearningDashboard({
   user,
@@ -17,24 +18,36 @@ export default function UserLearningDashboard({
   onStartExamWithQuestions,
   onStartRevisionDrill,
   onStartSingleTopicDrill,
-  onLogout
+  onLogout,
+  starredQuestions: propStarredQuestions,
+  onToggleStar: propOnToggleStar
 }) {
   const [exams, setExams] = useState([]);
   const [mistakes, setMistakes] = useState([]);
+  const [internalStarred, setInternalStarred] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('trends'); // 'trends' | 'overview' | 'mistakes' | 'history'
+  const [activeTab, setActiveTab] = useState('trends'); // 'trends' | 'overview' | 'pacing' | 'mistakes' | 'starred' | 'history'
   const [selectedMistake, setSelectedMistake] = useState(null);
+
+  const activeStarredList = propStarredQuestions || internalStarred;
 
   const loadUserData = async () => {
     if (!user) return;
     setIsLoading(true);
     try {
-      const [examList, mistakeList] = await Promise.all([
+      const [examList, mistakeList, cloudBookmarks] = await Promise.all([
         fetchUserExams(user.username),
-        fetchUserMistakes(user.username)
+        fetchUserMistakes(user.username),
+        fetchUserBookmarks(user.username)
       ]);
       setExams(examList);
       setMistakes(mistakeList);
+
+      const localBm = getLocalBookmarks(user.username);
+      const mergedMap = new Map();
+      (localBm || []).forEach(b => mergedMap.set(String(b.question_id || b.id), b));
+      (cloudBookmarks || []).forEach(b => mergedMap.set(String(b.question_id || b.id), b));
+      setInternalStarred(Array.from(mergedMap.values()));
     } catch (e) {
       console.warn("Could not fetch user learning records:", e);
     }
@@ -182,6 +195,82 @@ export default function UserLearningDashboard({
     });
   };
 
+  const handleToggleStar = async (question) => {
+    if (propOnToggleStar) {
+      propOnToggleStar(question);
+      return;
+    }
+    const qId = String(question.id || question.question_id);
+    const exists = activeStarredList.some(q => String(q.id || q.question_id) === qId);
+    let updated;
+    if (exists) {
+      updated = activeStarredList.filter(q => String(q.id || q.question_id) !== qId);
+      if (user?.username) {
+        removeBookmarkFromCloud(qId, user.username);
+      }
+    } else {
+      updated = [question, ...activeStarredList];
+      if (user?.username) {
+        saveBookmarkToCloud(question, user.username);
+      }
+    }
+    setInternalStarred(updated);
+    setLocalBookmarks(user?.username, updated);
+  };
+
+  const handleLaunchStarredDrill = (customQuestions) => {
+    const list = customQuestions || activeStarredList;
+    if (!list || list.length === 0) return;
+
+    const subNameMap = {
+      english: 'Use of English',
+      biology: 'Biology',
+      physics: 'Physics',
+      chemistry: 'Chemistry'
+    };
+
+    const formattedQuestions = list.map((q, idx) => {
+      const opts = q.options || {
+        a: q.option_a,
+        b: q.option_b,
+        c: q.option_c,
+        d: q.option_d
+      };
+      return {
+        number: idx + 1,
+        id: q.question_id || q.id,
+        subject_id: q.subject_id || 'english',
+        topic: q.topic || 'General',
+        year: q.year || null,
+        question: q.question || q.question_text,
+        option_a: opts.a || q.option_a || '',
+        option_b: opts.b || q.option_b || '',
+        option_c: opts.c || q.option_c || '',
+        option_d: opts.d || q.option_d || '',
+        correct_answer: q.correct_answer,
+        explanation: q.explanation,
+        passage_id: q.passage_id || null
+      };
+    });
+
+    const uniqueSubs = [...new Set(formattedQuestions.map(q => q.subject_id))];
+    const subjects = uniqueSubs.map(sId => ({
+      id: sId,
+      name: subNameMap[sId] || sId.toUpperCase(),
+      count: formattedQuestions.filter(q => q.subject_id === sId).length,
+      scale_to: 100
+    }));
+
+    onStartExamWithQuestions({
+      exam_id: 'starred_drill_' + Date.now(),
+      mode: 'starred_drill',
+      duration_seconds: formattedQuestions.length * 45,
+      total_questions: formattedQuestions.length,
+      subjects: subjects.length > 0 ? subjects : [{ id: 'starred', name: 'Starred Drill', count: formattedQuestions.length, scale_to: 100 }],
+      questions: formattedQuestions
+    });
+  };
+
   const getSubjectColor = (subj) => {
     switch (subj) {
       case 'english': return 'text-indigo-600 bg-indigo-50 border-indigo-200';
@@ -241,7 +330,7 @@ export default function UserLearningDashboard({
       </div>
 
       {/* Candidate Performance Summary Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
           <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Candidate Account</div>
           <div className="text-xl font-bold text-slate-900 flex items-center space-x-2">
@@ -280,6 +369,15 @@ export default function UserLearningDashboard({
           <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Mistake Vault</div>
           <div className="text-3xl font-extrabold text-amber-600 font-mono">{mistakes.length}</div>
           <div className="text-xs text-slate-500">Unresolved questions to re-test</div>
+        </div>
+
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
+          <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Starred Library</div>
+          <div className="text-3xl font-extrabold text-amber-500 font-mono flex items-center space-x-1.5">
+            <Star size={22} className="fill-amber-400 text-amber-500" />
+            <span>{activeStarredList.length}</span>
+          </div>
+          <div className="text-xs text-slate-500">Bookmarked tricky questions</div>
         </div>
       </div>
 
@@ -337,6 +435,21 @@ export default function UserLearningDashboard({
           <span>Mistakes</span>
           <span className="text-[10px] px-1.5 py-0.2 bg-amber-100 text-amber-800 rounded-full font-mono font-bold">
             {mistakes.length}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('starred')}
+          className={`whitespace-nowrap pb-2.5 sm:pb-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 transition flex items-center space-x-1.5 cursor-pointer ${
+            activeTab === 'starred'
+              ? 'border-emerald-600 text-emerald-800'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Star size={15} className={activeStarredList.length > 0 ? "fill-amber-400 text-amber-500" : ""} />
+          <span>Starred</span>
+          <span className="text-[10px] px-1.5 py-0.2 bg-amber-100 text-amber-800 rounded-full font-mono font-bold">
+            {activeStarredList.length}
           </span>
         </button>
 
@@ -453,7 +566,16 @@ export default function UserLearningDashboard({
         </div>
       )}
 
-      {/* TAB 3: EXAM HISTORY */}
+      {/* TAB 4: STARRED TRICKY QUESTIONS LIBRARY */}
+      {activeTab === 'starred' && (
+        <StarredQuestionsLibrary
+          starredQuestions={activeStarredList}
+          onToggleStar={handleToggleStar}
+          onStartStarredDrill={handleLaunchStarredDrill}
+        />
+      )}
+
+      {/* TAB 5: EXAM HISTORY */}
       {activeTab === 'history' && (
         <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-xs space-y-4">
           <h2 className="text-base sm:text-lg font-bold text-slate-900">Exam History</h2>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { 
-  Bookmark, ChevronLeft, ChevronRight, CheckCircle2, 
+  Bookmark, Star, ChevronLeft, ChevronRight, CheckCircle2, 
   RotateCcw, AlertTriangle, BookOpen, Send, ChevronDown, ChevronUp, Eye
 } from 'lucide-react';
 import MathRenderer from './MathRenderer';
@@ -12,9 +12,11 @@ export default function QuestionCard({
   totalInSubject,
   userAnswer,
   isFlagged,
+  isStarred = false,
   onSelectOption,
   onClearAnswer,
   onToggleFlag,
+  onToggleStar,
   onNext,
   onPrevious,
   hasPrevious,
@@ -119,6 +121,18 @@ export default function QuestionCard({
                   Clear
                 </button>
               )}
+              <button
+                onClick={() => onToggleStar && onToggleStar(question)}
+                className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition active:scale-95 cursor-pointer ${
+                  isStarred
+                    ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-transparent'
+                }`}
+                title={isStarred ? "Remove from Starred Library" : "Star / Bookmark tricky question"}
+              >
+                <Star size={13} className={isStarred ? 'fill-amber-500 text-amber-500' : 'text-slate-400'} />
+                <span>{isStarred ? 'Starred' : 'Star'}</span>
+              </button>
               <button
                 onClick={onToggleFlag}
                 className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
@@ -234,8 +248,20 @@ export default function QuestionCard({
           <span>Prev</span>
         </button>
 
-        {/* Middle: Flag & Submit */}
-        <div className="flex items-center space-x-2">
+        {/* Middle: Star, Flag & Submit */}
+        <div className="flex items-center space-x-1.5">
+          <button
+            onClick={() => onToggleStar && onToggleStar(question)}
+            className={`p-2 rounded-xl text-xs transition border active:scale-95 cursor-pointer ${
+              isStarred 
+                ? 'bg-amber-100 text-amber-900 border-amber-300' 
+                : 'bg-slate-100 text-slate-600 border-slate-200'
+            }`}
+            title={isStarred ? "Remove Star" : "Star tricky question"}
+          >
+            <Star size={16} className={isStarred ? 'fill-amber-500 text-amber-500' : 'text-slate-400'} />
+          </button>
+
           <button
             onClick={onToggleFlag}
             className={`p-2 rounded-xl text-xs transition border ${
