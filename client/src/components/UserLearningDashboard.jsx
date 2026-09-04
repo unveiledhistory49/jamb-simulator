@@ -472,7 +472,13 @@ export default function UserLearningDashboard({
                       {e.mode === 'full_mock' ? 'Full 4-Subject UTME Mock (180 Qs)' : `${e.mode} Practice`}
                     </div>
                     <div className="text-xs text-slate-400 font-mono mt-0.5">
-                      {new Date(e.timestamp).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+                      {(() => {
+                        try {
+                          return new Date(e.timestamp).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+                        } catch {
+                          return new Date(e.timestamp).toLocaleDateString();
+                        }
+                      })()}
                     </div>
                     <div className="text-xs text-slate-600 mt-1 flex items-center space-x-3">
                       <span>Time: <strong>{Math.floor(e.time_spent_seconds / 60)} mins</strong></span>

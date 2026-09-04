@@ -64,7 +64,13 @@ export default function CumulativeTrendChart({ exams = [] }) {
         sessionNum: index + 1,
         id: e.id,
         date: new Date(e.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-        fullDate: new Date(e.timestamp).toLocaleDateString(undefined, { dateStyle: 'medium', timeStyle: 'short' }),
+        fullDate: (() => {
+          try {
+            return new Date(e.timestamp).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+          } catch {
+            return new Date(e.timestamp).toLocaleDateString();
+          }
+        })(),
         mode: e.mode,
         totalScore,
         maxScore,
