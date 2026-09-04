@@ -32,6 +32,7 @@ export default function App() {
   const [flagged, setFlagged] = useState({});
   const [timeRemaining, setTimeRemaining] = useState(7200);
   const [timeSpent, setTimeSpent] = useState(0);
+  const [questionTimeSpent, setQuestionTimeSpent] = useState({});
 
   // UI state
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
@@ -44,11 +45,15 @@ export default function App() {
   const subjects = examData?.subjects || [];
   const subjectQuestions = allQuestions.filter(q => q.subject_id === activeSubject);
   const currentQuestion = subjectQuestions[subjectIndex];
+  
+  // Track active question ID for smooth non-interrupted per-question timing
+  const currentQuestionIdRef = useRef(null);
+  currentQuestionIdRef.current = currentQuestion?.id;
 
   // Global question number across entire paper
   const globalQuestionNumber = allQuestions.findIndex(q => q.id === currentQuestion?.id) + 1;
 
-  // 1. Continuous Timer Effect
+  // 1. Continuous Timer Effect (Tracks global countdown and active question duration)
   useEffect(() => {
     let timerId;
     if (view === 'exam' && timeRemaining > 0) {
@@ -62,6 +67,14 @@ export default function App() {
           return prev - 1;
         });
         setTimeSpent(prev => prev + 1);
+
+        // Accumulate active view seconds for the currently focused question
+        if (currentQuestionIdRef.current) {
+          setQuestionTimeSpent(prev => ({
+            ...prev,
+            [currentQuestionIdRef.current]: (prev[currentQuestionIdRef.current] || 0) + 1
+          }));
+        }
       }, 1000);
     }
     return () => clearInterval(timerId);
@@ -70,7 +83,7 @@ export default function App() {
   // 2. Auto Submit on Time Expiry
   const handleAutoSubmit = useCallback(() => {
     handleFinalSubmit();
-  }, [examData, answers, timeSpent, currentUser]);
+  }, [examData, answers, timeSpent, questionTimeSpent, currentUser]);
 
   // 3. Start Exam Function (with seamless Vercel offline fallback)
   const startExam = async (url, fallbackOptions = { mode: 'full_mock' }) => {
@@ -93,6 +106,7 @@ export default function App() {
       setExamData(data);
       setTimeRemaining(data.duration_seconds || 7200);
       setTimeSpent(0);
+      setQuestionTimeSpent({});
       setAnswers({});
       setFlagged({});
       setActiveSubject(data.subjects[0]?.id || 'english');
@@ -228,7 +242,8 @@ export default function App() {
           mode: examData.mode,
           time_spent_seconds: timeSpent,
           answers: answers,
-          question_ids: allQuestions.map(q => q.id)
+          question_ids: allQuestions.map(q => q.id),
+          question_time_spent: questionTimeSpent
         };
 
         const res = await fetch('/api/exam/submit', {
@@ -249,7 +264,8 @@ export default function App() {
           mode: examData.mode,
           time_spent_seconds: timeSpent,
           answers: answers,
-          question_ids: allQuestions.map(q => q.id)
+          question_ids: allQuestions.map(q => q.id),
+          question_time_spent: questionTimeSpent
         });
       }
 
@@ -273,6 +289,25 @@ export default function App() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Launch targeted revision drill for weak topics
+  const handleStartRevisionDrill = (targetTopics) => {
+    startExam('/api/exam/drill?topics=' + encodeURIComponent(targetTopics.join(',')), {
+      mode: 'revision_drill',
+      target_topics: targetTopics,
+      count: 20
+    });
+  };
+
+  // Launch drill for single specific syllabus topic
+  const handleStartSingleTopicDrill = (topicName, subjectId) => {
+    startExam('/api/exam/drill?subject=' + encodeURIComponent(subjectId || 'english') + '&topic=' + encodeURIComponent(topicName), {
+      mode: 'revision_drill',
+      subject: subjectId || 'english',
+      target_topics: [topicName],
+      count: 15
+    });
   };
 
   // 5. Official JAMB 8-Key Keyboard Navigation
@@ -354,6 +389,8 @@ export default function App() {
             user={currentUser}
             onBackToHome={() => setView('home')}
             onStartExamWithQuestions={handleStartExamDirect}
+            onStartRevisionDrill={handleStartRevisionDrill}
+            onStartSingleTopicDrill={handleStartSingleTopicDrill}
             onLogout={handleLogout}
           />
         </main>
@@ -457,6 +494,8 @@ export default function App() {
             onGoHome={() => setView('home')}
             currentUser={currentUser}
             onOpenLearning={() => setView('learning')}
+            onStartRevisionDrill={handleStartRevisionDrill}
+            onStartSingleTopicDrill={handleStartSingleTopicDrill}
           />
         </main>
       )}

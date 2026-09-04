@@ -1,18 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   User, Award, Clock, ArrowLeft, RotateCcw, AlertTriangle, 
   CheckCircle2, ChevronRight, BarChart3, BookOpen, Dna, Atom, 
   FlaskConical, Target, ShieldCheck, Sparkles, LogOut, RefreshCw, 
-  Trash2, TrendingUp, ArrowUpRight, ArrowDownRight
+  Trash2, TrendingUp, ArrowUpRight, ArrowDownRight, Zap
 } from 'lucide-react';
 import { fetchUserExams, fetchUserMistakes, resolveMistakeInCloud } from '../utils/supabaseClient';
 import MathRenderer from './MathRenderer';
 import CumulativeTrendChart from './CumulativeTrendChart';
+import TopicHeatmap from './TopicHeatmap';
+import PacingAnalytics from './PacingAnalytics';
 
 export default function UserLearningDashboard({
   user,
   onBackToHome,
   onStartExamWithQuestions,
+  onStartRevisionDrill,
+  onStartSingleTopicDrill,
   onLogout
 }) {
   const [exams, setExams] = useState([]);
@@ -57,25 +61,96 @@ export default function UserLearningDashboard({
   // Aggregate topic strengths & weaknesses across all past exams
   const topicAgg = {};
   exams.forEach(e => {
-    const breakdown = e.summary?.topic_breakdown || {};
-    Object.entries(breakdown).forEach(([topic, stat]) => {
-      if (!topicAgg[topic]) {
-        topicAgg[topic] = { subject: stat.subject, correct: 0, total: 0 };
-      }
-      topicAgg[topic].correct += (stat.correct || 0);
-      topicAgg[topic].total += (stat.total || 0);
-    });
+    const rawBreakdown = e.summary?.topic_breakdown;
+    if (Array.isArray(rawBreakdown)) {
+      rawBreakdown.forEach(stat => {
+        const topic = stat.topic || 'General';
+        if (!topicAgg[topic]) {
+          topicAgg[topic] = { subject: stat.subject || 'english', correct: 0, total: 0 };
+        }
+        topicAgg[topic].correct += (stat.correct || 0);
+        topicAgg[topic].total += (stat.total || 0);
+      });
+    } else if (rawBreakdown && typeof rawBreakdown === 'object') {
+      Object.entries(rawBreakdown).forEach(([topic, stat]) => {
+        if (!topicAgg[topic]) {
+          topicAgg[topic] = { subject: stat.subject || 'english', correct: 0, total: 0 };
+        }
+        topicAgg[topic].correct += (stat.correct || 0);
+        topicAgg[topic].total += (stat.total || 0);
+      });
+    }
   });
 
-  const topicsList = Object.entries(topicAgg).map(([topic, stat]) => ({
-    topic,
-    subject: stat.subject,
-    accuracy: stat.total > 0 ? Math.round((stat.correct / stat.total) * 100) : 0,
-    total: stat.total
-  })).sort((a, b) => a.accuracy - b.accuracy);
+  const allTopicsList = Object.entries(topicAgg).map(([topic, stat]) => {
+    const acc = stat.total > 0 ? Math.round((stat.correct / stat.total) * 100) : 0;
+    return {
+      topic,
+      subject: stat.subject,
+      correct: stat.correct,
+      total: stat.total,
+      accuracy: acc,
+      deficit_score: (100 - acc) * stat.total
+    };
+  });
 
-  const weakTopics = topicsList.filter(t => t.accuracy < 50 && t.total >= 2);
-  const strongTopics = topicsList.filter(t => t.accuracy >= 75 && t.total >= 2);
+  const top3HighYieldTopics = [...allTopicsList]
+    .filter(t => t.accuracy < 75 && t.total >= 1)
+    .sort((a, b) => b.deficit_score - a.deficit_score)
+    .slice(0, 3);
+
+  // Aggregate pacing metrics across past exams
+  const aggregatedPacing = useMemo(() => {
+    let totalQuestionsAnswered = 0;
+    let totalTimeSpent = 0;
+    let allTimeWasters = [];
+    let allRushedErrors = [];
+    const subjectTime = { english: 0, biology: 0, physics: 0, chemistry: 0 };
+
+    exams.forEach(e => {
+      const summary = e.summary || {};
+      const pacing = summary.pacing_analysis || {};
+      totalTimeSpent += (summary.time_spent_seconds || 0);
+      totalQuestionsAnswered += (summary.total_answered || 0);
+
+      if (Array.isArray(pacing.time_wasters)) {
+        allTimeWasters.push(...pacing.time_wasters);
+      }
+      if (Array.isArray(pacing.rushed_errors)) {
+        allRushedErrors.push(...pacing.rushed_errors);
+      }
+      if (pacing.subject_pacing) {
+        Object.entries(pacing.subject_pacing).forEach(([sId, stat]) => {
+          if (subjectTime[sId] !== undefined) {
+            subjectTime[sId] += (stat.time_spent_seconds || 0);
+          }
+        });
+      }
+    });
+
+    const overallAvgSpeed = totalQuestionsAnswered > 0 ? Math.round(totalTimeSpent / totalQuestionsAnswered) : 0;
+
+    const subjectPacing = {};
+    for (const [sId, sec] of Object.entries(subjectTime)) {
+      if (sec > 0) {
+        subjectPacing[sId] = {
+          time_spent_seconds: sec,
+          percentage_of_total_time: totalTimeSpent > 0 ? Math.round((sec / totalTimeSpent) * 100) : 0,
+          avg_seconds_per_question: Math.round(sec / 40)
+        };
+      }
+    }
+
+    return {
+      time_wasters: allTimeWasters.sort((a, b) => (b.time_spent_seconds || 0) - (a.time_spent_seconds || 0)),
+      time_wasters_count: allTimeWasters.length,
+      rushed_errors: allRushedErrors.sort((a, b) => (a.time_spent_seconds || 0) - (b.time_spent_seconds || 0)),
+      rushed_errors_count: allRushedErrors.length,
+      subject_pacing: subjectPacing,
+      overall_avg_speed: overallAvgSpeed,
+      total_time_spent: totalTimeSpent
+    };
+  }, [exams]);
 
   // Launch a custom drill from unresolved mistakes
   const handleLaunchMistakeDrill = () => {
@@ -224,13 +299,31 @@ export default function UserLearningDashboard({
 
         <button
           onClick={() => setActiveTab('overview')}
-          className={`whitespace-nowrap pb-2.5 sm:pb-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 transition ${
+          className={`whitespace-nowrap pb-2.5 sm:pb-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 transition flex items-center space-x-1.5 ${
             activeTab === 'overview'
               ? 'border-emerald-600 text-emerald-800'
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
-          Weakness Topics
+          <BarChart3 size={15} />
+          <span>Topic Heatmap</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('pacing')}
+          className={`whitespace-nowrap pb-2.5 sm:pb-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 transition flex items-center space-x-1.5 ${
+            activeTab === 'pacing'
+              ? 'border-emerald-600 text-emerald-800'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Clock size={15} />
+          <span>Pacing & Speed</span>
+          {aggregatedPacing.time_wasters_count > 0 && (
+            <span className="text-[10px] px-1.5 py-0.2 bg-rose-100 text-rose-800 rounded-full font-mono font-bold">
+              {aggregatedPacing.time_wasters_count}
+            </span>
+          )}
         </button>
 
         <button
@@ -264,95 +357,24 @@ export default function UserLearningDashboard({
         <CumulativeTrendChart exams={exams} />
       )}
 
-      {/* TAB 1: WEAKNESS DIAGNOSTICS & TOPICS */}
+      {/* TAB 1: TOPIC-LEVEL WEAKNESS HEATMAP & REVISION DIRECTIVES */}
       {activeTab === 'overview' && (
-        <div className="space-y-4 sm:space-y-6">
-          {/* Mistake Bank Banner Callout */}
-          {mistakes.length > 0 && (
-            <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-300 rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3">
-              <div className="space-y-1">
-                <div className="text-xs sm:text-sm font-bold text-amber-950 flex items-center space-x-1.5">
-                  <AlertTriangle size={16} className="text-amber-600" />
-                  <span>{mistakes.length} unresolved mistake(s) in your bank</span>
-                </div>
-                <p className="text-[11px] sm:text-xs text-amber-900/80">
-                  Re-attempt these questions until you score 100% to cement difficult concepts.
-                </p>
-              </div>
+        <TopicHeatmap
+          topics={allTopicsList}
+          top3HighYield={top3HighYieldTopics}
+          onStartRevisionDrill={onStartRevisionDrill}
+          onStartSingleTopicDrill={onStartSingleTopicDrill}
+        />
+      )}
 
-              <button
-                onClick={handleLaunchMistakeDrill}
-                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-xs transition active:scale-95 flex items-center space-x-1.5"
-              >
-                <RotateCcw size={13} />
-                <span>Drill Mistakes ({mistakes.length} Qs)</span>
-              </button>
-            </div>
-          )}
-
-          {/* Topic Strengths & Weaknesses Heatmap */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-            {/* Weak Topics */}
-            <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-xs space-y-3 sm:space-y-4">
-              <div className="flex items-center space-x-2 text-rose-800 font-bold text-xs sm:text-sm">
-                <div className="w-2 h-2 rounded-full bg-rose-500"></div>
-                <span>High-Yield Weaknesses to Revise</span>
-              </div>
-              <p className="text-[11px] sm:text-xs text-slate-500">Topics where your accuracy is currently below 50%:</p>
-
-              {weakTopics.length === 0 ? (
-                <div className="p-3.5 bg-slate-50 rounded-xl text-xs text-slate-500 text-center">
-                  {totalExams === 0 ? 'Take your first mock to generate topic weakness diagnostics.' : 'No critical weaknesses detected! Keep practicing.'}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {weakTopics.map(t => (
-                    <div key={t.topic} className="p-2.5 sm:p-3 rounded-xl border border-rose-100 bg-rose-50/50 flex items-center justify-between">
-                      <div>
-                        <div className="font-semibold text-xs text-slate-900">{t.topic}</div>
-                        <div className="text-[10px] text-slate-500 capitalize">{t.subject}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-xs font-bold text-rose-700 font-mono">{t.accuracy}%</div>
-                        <div className="text-[10px] text-slate-400 font-mono">{t.total} Qs</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Strong Topics */}
-            <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-xs space-y-3 sm:space-y-4">
-              <div className="flex items-center space-x-2 text-emerald-800 font-bold text-xs sm:text-sm">
-                <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                <span>Mastered Topics</span>
-              </div>
-              <p className="text-[11px] sm:text-xs text-slate-500">Topics where your accuracy is 75% or higher:</p>
-
-              {strongTopics.length === 0 ? (
-                <div className="p-3.5 bg-slate-50 rounded-xl text-xs text-slate-500 text-center">
-                  {totalExams === 0 ? 'Take your first mock to track mastered topics.' : 'Keep practicing to master topics at 75%+.'}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {strongTopics.map(t => (
-                    <div key={t.topic} className="p-2.5 sm:p-3 rounded-xl border border-emerald-100 bg-emerald-50/50 flex items-center justify-between">
-                      <div>
-                        <div className="font-semibold text-xs text-slate-900">{t.topic}</div>
-                        <div className="text-[10px] text-slate-500 capitalize">{t.subject}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-xs font-bold text-emerald-700 font-mono">{t.accuracy}%</div>
-                        <div className="text-[10px] text-slate-400 font-mono">{t.total} Qs</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+      {/* TAB 2: PACING & TIME DRAIN ANALYTICS */}
+      {activeTab === 'pacing' && (
+        <PacingAnalytics
+          pacingData={aggregatedPacing}
+          totalQuestions={exams.reduce((sum, e) => sum + (e.summary?.total_answered || 0), 0)}
+          avgSpeed={aggregatedPacing.overall_avg_speed}
+          timeSpentSeconds={aggregatedPacing.total_time_spent}
+        />
       )}
 
       {/* TAB 2: MISTAKE BANK */}

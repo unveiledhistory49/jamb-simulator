@@ -277,7 +277,7 @@ app.get('/api/exam/generate', (req, res) => {
 // Submit Exam & Score Evaluation
 app.post('/api/exam/submit', (req, res) => {
   try {
-    const { exam_id, mode, time_spent_seconds, answers, question_ids } = req.body;
+    const { exam_id, mode, time_spent_seconds, answers, question_ids, question_time_spent = {} } = req.body;
     // answers is an object: { [question_id]: 'a' | 'b' | 'c' | 'd' }
     // question_ids is array of question IDs in exam order
 
@@ -295,10 +295,10 @@ app.post('/api/exam/submit', (req, res) => {
 
     // Evaluate per subject
     const subjectStats = {
-      english: { correct: 0, total: 0, answered: 0 },
-      biology: { correct: 0, total: 0, answered: 0 },
-      physics: { correct: 0, total: 0, answered: 0 },
-      chemistry: { correct: 0, total: 0, answered: 0 }
+      english: { correct: 0, total: 0, answered: 0, time_spent: 0 },
+      biology: { correct: 0, total: 0, answered: 0, time_spent: 0 },
+      physics: { correct: 0, total: 0, answered: 0, time_spent: 0 },
+      chemistry: { correct: 0, total: 0, answered: 0, time_spent: 0 }
     };
 
     const topicStats = {};
@@ -311,21 +311,26 @@ app.post('/api/exam/submit', (req, res) => {
       const userChoice = (answers && answers[qid]) ? String(answers[qid]).toLowerCase().trim() : null;
       const isCorrect = userChoice === q.correct_answer.toLowerCase();
       const isAnswered = userChoice !== null && userChoice !== '';
+      const qSec = (question_time_spent && question_time_spent[qid]) || 0;
+      const isTimeWaster = qSec > 90;
+      const isRushedError = qSec < 15 && isAnswered && !isCorrect;
 
       const sId = q.subject_id;
       if (!subjectStats[sId]) {
-        subjectStats[sId] = { correct: 0, total: 0, answered: 0 };
+        subjectStats[sId] = { correct: 0, total: 0, answered: 0, time_spent: 0 };
       }
       subjectStats[sId].total += 1;
+      subjectStats[sId].time_spent += qSec;
       if (isAnswered) subjectStats[sId].answered += 1;
       if (isCorrect) subjectStats[sId].correct += 1;
 
       // Topic analytics
       const topic = q.topic || 'General';
       if (!topicStats[topic]) {
-        topicStats[topic] = { subject: sId, correct: 0, total: 0 };
+        topicStats[topic] = { subject: sId, correct: 0, total: 0, time_spent: 0 };
       }
       topicStats[topic].total += 1;
+      topicStats[topic].time_spent += qSec;
       if (isCorrect) topicStats[topic].correct += 1;
 
       reviewItems.push({
@@ -346,17 +351,14 @@ app.post('/api/exam/submit', (req, res) => {
         explanation: q.explanation,
         year: q.year,
         difficulty: q.difficulty,
-        passage: q.passage_id ? passagesMap[q.passage_id] : null
+        passage: q.passage_id ? passagesMap[q.passage_id] : null,
+        time_spent_seconds: qSec,
+        is_time_waster: isTimeWaster,
+        is_rushed_error: isRushedError
       });
     });
 
     // Compute scaled scores according to UTME CBT specification
-    // In UTME:
-    // English (60 Qs) -> Scaled to 100 marks: (correct / 60) * 100
-    // Biology (40 Qs) -> Scaled to 100 marks: (correct / 40) * 100
-    // Physics (40 Qs) -> Scaled to 100 marks: (correct / 40) * 100
-    // Chemistry (40 Qs) -> Scaled to 100 marks: (correct / 40) * 100
-    // Total Max Score: 400 marks
     let totalScore = 0;
     let maxScore = 0;
     const subjectScores = {};
@@ -370,7 +372,8 @@ app.post('/api/exam/submit', (req, res) => {
           answered_questions: stats.answered,
           accuracy_percentage: Math.round((stats.correct / stats.total) * 100),
           scaled_score: scaled,
-          max_score: 100
+          max_score: 100,
+          time_spent_seconds: stats.time_spent
         };
         totalScore += scaled;
         maxScore += 100;
@@ -396,6 +399,47 @@ app.post('/api/exam/submit', (req, res) => {
     const timeSpent = parseInt(time_spent_seconds) || 0;
     const avgSecondsPerQuestion = question_ids.length > 0 ? Math.round(timeSpent / question_ids.length) : 0;
 
+    // Compute Pacing Diagnostics
+    const timeWasters = reviewItems
+      .filter(r => r.is_time_waster)
+      .sort((a, b) => b.time_spent_seconds - a.time_spent_seconds);
+
+    const rushedErrors = reviewItems
+      .filter(r => r.is_rushed_error)
+      .sort((a, b) => a.time_spent_seconds - b.time_spent_seconds);
+
+    const subjectPacing = {};
+    for (const [sId, stats] of Object.entries(subjectStats)) {
+      if (stats.total > 0) {
+        subjectPacing[sId] = {
+          time_spent_seconds: stats.time_spent,
+          percentage_of_total_time: timeSpent > 0 ? Math.round((stats.time_spent / timeSpent) * 100) : 0,
+          avg_seconds_per_question: stats.total > 0 ? Math.round(stats.time_spent / stats.total) : 0
+        };
+      }
+    }
+
+    // Topic mastery list & Top 3 High-Yield Topics (weighted deficit)
+    const topicBreakdown = Object.entries(topicStats).map(([topic, stat]) => {
+      const accuracy = stat.total > 0 ? Math.round((stat.correct / stat.total) * 100) : 0;
+      const deficitScore = (100 - accuracy) * stat.total;
+      return {
+        topic,
+        subject: stat.subject,
+        correct: stat.correct,
+        total: stat.total,
+        accuracy,
+        deficit_score: deficitScore,
+        time_spent_seconds: stat.time_spent
+      };
+    });
+
+    const sortedTopics = [...topicBreakdown]
+      .filter(t => t.accuracy < 75 && t.total >= 1)
+      .sort((a, b) => b.deficit_score - a.deficit_score);
+
+    const top3HighYieldTopics = sortedTopics.slice(0, 3);
+
     const resultSummary = {
       exam_id: exam_id || 'jamb_' + Date.now(),
       mode: mode || 'full_mock',
@@ -408,7 +452,15 @@ app.post('/api/exam/submit', (req, res) => {
       grade,
       remarks,
       subject_scores: subjectScores,
-      topic_breakdown: topicStats,
+      topic_breakdown: topicBreakdown,
+      top_3_high_yield_topics: top3HighYieldTopics,
+      pacing_analysis: {
+        time_wasters: timeWasters,
+        time_wasters_count: timeWasters.length,
+        rushed_errors: rushedErrors,
+        rushed_errors_count: rushedErrors.length,
+        subject_pacing: subjectPacing
+      },
       total_answered: reviewItems.filter(r => r.is_answered).length,
       total_correct: reviewItems.filter(r => r.is_correct).length,
       total_unanswered: reviewItems.filter(r => !r.is_answered).length,

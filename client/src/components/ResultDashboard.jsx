@@ -2,18 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { 
   Trophy, CheckCircle2, XCircle, Clock, Award, BarChart3, 
   RotateCcw, Home, Filter, BookOpen, AlertCircle, ChevronDown, ChevronUp,
-  Bookmark, ArrowRight
+  Bookmark, ArrowRight, Zap, Target
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import MathRenderer from './MathRenderer';
+import TopicHeatmap from './TopicHeatmap';
+import PacingAnalytics from './PacingAnalytics';
 
 export default function ResultDashboard({
   resultData,
   onRetakeExam,
   onGoHome,
   currentUser,
-  onOpenLearning
+  onOpenLearning,
+  onStartRevisionDrill,
+  onStartSingleTopicDrill
 }) {
+  const [activeTab, setActiveTab] = useState('review'); // 'review' | 'pacing' | 'topics'
   const [reviewFilter, setReviewFilter] = useState('all'); // 'all', 'wrong', 'correct', 'unanswered'
   const [expandedPassageId, setExpandedPassageId] = useState(null);
 
@@ -230,18 +235,81 @@ export default function ResultDashboard({
         </div>
       </div>
 
+      {/* Section Navigation Tabs */}
+      <div className="flex border-b border-slate-200 space-x-1 sm:space-x-2 overflow-x-auto no-scrollbar pb-0.5">
+        <button
+          onClick={() => setActiveTab('review')}
+          className={`whitespace-nowrap pb-2.5 sm:pb-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 transition flex items-center space-x-1.5 ${
+            activeTab === 'review'
+              ? 'border-emerald-600 text-emerald-800'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <BookOpen size={15} />
+          <span>Solutions Review</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('pacing')}
+          className={`whitespace-nowrap pb-2.5 sm:pb-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 transition flex items-center space-x-1.5 ${
+            activeTab === 'pacing'
+              ? 'border-emerald-600 text-emerald-800'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Clock size={15} />
+          <span>Time Drain & Pacing</span>
+          {summary.pacing_analysis?.time_wasters_count > 0 && (
+            <span className="text-[10px] px-1.5 py-0.2 bg-rose-100 text-rose-800 rounded-full font-mono font-bold">
+              {summary.pacing_analysis.time_wasters_count}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('topics')}
+          className={`whitespace-nowrap pb-2.5 sm:pb-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 transition flex items-center space-x-1.5 ${
+            activeTab === 'topics'
+              ? 'border-emerald-600 text-emerald-800'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <BarChart3 size={15} />
+          <span>Topic Weakness Heatmap</span>
+        </button>
+      </div>
+
+      {activeTab === 'pacing' && (
+        <PacingAnalytics
+          pacingData={summary.pacing_analysis}
+          totalQuestions={reviewItems.length}
+          avgSpeed={summary.avg_seconds_per_question}
+          timeSpentSeconds={summary.time_spent_seconds}
+        />
+      )}
+
+      {activeTab === 'topics' && (
+        <TopicHeatmap
+          topics={summary.topic_breakdown}
+          top3HighYield={summary.top_3_high_yield_topics}
+          onStartRevisionDrill={onStartRevisionDrill}
+          onStartSingleTopicDrill={onStartSingleTopicDrill}
+        />
+      )}
+
       {/* Solutions & In-Depth Question Review Section */}
-      <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-200 shadow-sm space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-5">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900 flex items-center space-x-2">
-              <BookOpen size={20} className="text-emerald-600" />
-              <span>Comprehensive Solution & Answer Review</span>
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Review every question, verify step-by-step explanations, and reinforce syllabus concepts
-            </p>
-          </div>
+      {activeTab === 'review' && (
+        <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-xs space-y-4 sm:space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+            <div>
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center space-x-2">
+                <BookOpen size={18} className="text-emerald-600" />
+                <span>Comprehensive Solution & Answer Review</span>
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Review every question, verify step-by-step explanations, and reinforce syllabus concepts
+              </p>
+            </div>
 
           {/* Review Filter Pills */}
           <div className="flex flex-wrap items-center gap-2">
@@ -324,7 +392,22 @@ export default function ResultDashboard({
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {typeof q.time_spent_seconds === 'number' && q.time_spent_seconds > 0 && (
+                      <span className="font-mono text-[11px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                        ⏱️ {q.time_spent_seconds}s
+                      </span>
+                    )}
+                    {q.is_time_waster && (
+                      <span className="text-[10px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full border border-rose-200">
+                        ⏳ Time Waster
+                      </span>
+                    )}
+                    {q.is_rushed_error && (
+                      <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">
+                        ⚡ Rushed Error
+                      </span>
+                    )}
                     {q.is_correct ? (
                       <span className="flex items-center space-x-1 text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
                         <CheckCircle2 size={14} />
@@ -427,36 +510,37 @@ export default function ResultDashboard({
               </div>
             );
           })}
-        </div>
-
-        {/* Bottom Actions */}
-        <div className="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-slate-200">
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={onGoHome}
-              className="flex items-center space-x-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 transition"
-            >
-              <Home size={15} />
-              <span>Dashboard</span>
-            </button>
-            {currentUser && onOpenLearning && (
-              <button
-                onClick={onOpenLearning}
-                className="flex items-center space-x-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 transition"
-              >
-                <BarChart3 size={15} className="text-emerald-700" />
-                <span>My Learning Page</span>
-              </button>
-            )}
           </div>
-          <button
-            onClick={onRetakeExam}
-            className="flex items-center space-x-2 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-700/20 transition active:scale-95"
-          >
-            <RotateCcw size={15} />
-            <span>Take Another Mock Exam</span>
-          </button>
         </div>
+      )}
+
+      {/* Persistent Bottom Actions across all tabs */}
+      <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={onGoHome}
+            className="flex items-center space-x-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 transition cursor-pointer"
+          >
+            <Home size={15} />
+            <span>Dashboard</span>
+          </button>
+          {currentUser && onOpenLearning && (
+            <button
+              onClick={onOpenLearning}
+              className="flex items-center space-x-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 transition cursor-pointer"
+            >
+              <BarChart3 size={15} className="text-emerald-700" />
+              <span>My Learning Page</span>
+            </button>
+          )}
+        </div>
+        <button
+          onClick={onRetakeExam}
+          className="flex items-center space-x-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-700/20 transition active:scale-95 cursor-pointer"
+        >
+          <RotateCcw size={15} />
+          <span>Take Another Mock Exam</span>
+        </button>
       </div>
     </div>
   );
