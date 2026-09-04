@@ -19,8 +19,9 @@ export async function generateLocalExam({
   count = 40, 
   year = null,
   includePassages = true,
-  includeNovel = true
-}) {
+  includeNovel = true,
+  target_topics = []
+} = {}) {
   const bank = await fetchQuestionBank();
   const allQs = bank.questions;
   const passages = bank.passages;
@@ -84,11 +85,11 @@ export async function generateLocalExam({
     const chemSelected = shuffle(allQs.filter(q => q.subject_id === 'chemistry')).slice(0, 40);
 
     selected = [...engSelected, ...bioSelected, ...phySelected, ...chemSelected];
-  } else if (mode === 'revision_drill' && options.target_topics && options.target_topics.length > 0) {
-    const targetSet = new Set(options.target_topics.map(t => t.toLowerCase()));
+  } else if (mode === 'revision_drill' && target_topics && target_topics.length > 0) {
+    const targetSet = new Set(target_topics.map(t => t.toLowerCase()));
     let matchingQs = allQs.filter(q => q.topic && targetSet.has(q.topic.toLowerCase()));
     if (matchingQs.length === 0) {
-      matchingQs = allQs.filter(q => q.topic && options.target_topics.some(t => q.topic.toLowerCase().includes(t.toLowerCase())));
+      matchingQs = allQs.filter(q => q.topic && target_topics.some(t => q.topic.toLowerCase().includes(t.toLowerCase())));
     }
     const drillCount = count || Math.min(20, matchingQs.length || 20);
     selected = shuffle(matchingQs).slice(0, drillCount);
@@ -131,22 +132,43 @@ export async function generateLocalExam({
     passage: q.passage_id ? passages[q.passage_id] : null
   }));
 
+  const subNameMap = {
+    english: 'Use of English',
+    biology: 'Biology',
+    physics: 'Physics',
+    chemistry: 'Chemistry'
+  };
+
+  const getSubjectsConfig = () => {
+    if (mode === 'full_mock') {
+      return [
+        { id: 'english', name: 'Use of English', count: 60, scale_to: 100 },
+        { id: 'biology', name: 'Biology', count: 40, scale_to: 100 },
+        { id: 'physics', name: 'Physics', count: 40, scale_to: 100 },
+        { id: 'chemistry', name: 'Chemistry', count: 40, scale_to: 100 }
+      ];
+    }
+    if (mode === 'revision_drill') {
+      const uniqueSubs = [...new Set(sanitized.map(q => q.subject_id || 'english'))];
+      return uniqueSubs.map(sId => ({
+        id: sId,
+        name: subNameMap[sId] || sId.toUpperCase(),
+        count: sanitized.filter(q => q.subject_id === sId).length,
+        scale_to: 100
+      }));
+    }
+    return [
+      { id: subject, name: subNameMap[subject] || subject, count: sanitized.length, scale_to: 100 }
+    ];
+  };
+
   return {
     exam_id: 'jamb_' + Math.random().toString(36).substring(2, 11),
     mode,
     created_at: new Date().toISOString(),
     duration_seconds: durationSeconds,
     total_questions: sanitized.length,
-    subjects: mode === 'full_mock'
-      ? [
-          { id: 'english', name: 'Use of English', count: 60, scale_to: 100 },
-          { id: 'biology', name: 'Biology', count: 40, scale_to: 100 },
-          { id: 'physics', name: 'Physics', count: 40, scale_to: 100 },
-          { id: 'chemistry', name: 'Chemistry', count: 40, scale_to: 100 }
-        ]
-      : [
-          { id: subject, count: sanitized.length, scale_to: 100 }
-        ],
+    subjects: getSubjectsConfig(),
     questions: sanitized
   };
 }
